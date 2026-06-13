@@ -5,6 +5,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TerminalPanel from './components/terminal/TerminalPanel.vue'
 import ContextMenu from './components/shared/ContextMenu.vue'
+import CommandPalette from './components/shared/CommandPalette.vue'
 import { useTheme } from './composables/useTheme'
 import { useI18n } from './composables/useI18n'
 import { useNotifications } from './composables/useNotifications'
@@ -125,5 +126,7 @@ const navItems = [
 
     <!-- Global Context Menu -->
     <ContextMenu />
+    <!-- Command Palette (Ctrl+K) -->
+    <CommandPalette />
   </div>
 </template>

@@ -59,6 +59,8 @@ pub fn run() {
             commands::containers::kill_container,
             commands::containers::rename_container,
             commands::containers::remove_container,
+            commands::containers::get_container_stats,
+            commands::containers::get_container_logs,
             // Images
             commands::images::list_images,
             commands::images::pull_image,
@@ -80,6 +82,7 @@ pub fn run() {
             commands::host_metrics::get_host_metrics,
             // Terminal
             commands::terminal::spawn_host_terminal,
+            commands::terminal::spawn_container_terminal,
             commands::terminal::pty_write,
             commands::terminal::pty_resize,
             commands::terminal::pty_close,

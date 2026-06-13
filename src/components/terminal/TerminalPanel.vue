@@ -13,6 +13,7 @@ import 'xterm/css/xterm.css'
 const { show } = useContextMenu()
 
 const emit = defineEmits<{ close: [] }>()
+const props = defineProps<{ containerId?: string; containerName?: string }>()
 
 const terminalRef = ref<HTMLDivElement>()
 const isOpen = ref(false)
@@ -26,7 +27,7 @@ let unlisten: (() => void) | null = null
 let activeSessionId: string | null = null
 
 async function openTerminal(tabId: string) {
-  if (isOpen.value && activeTab.value === tabId) {
+  if (isOpen.value && activeTab.value === tabId && tabs.value.find(t => t.id === tabId)?.sessionId) {
     isOpen.value = false
     return
   }
@@ -34,16 +35,33 @@ async function openTerminal(tabId: string) {
   activeTab.value = tabId
   await nextTick()
   await initXterm()
-  if (tabId === 'host' && !tabs.value.find(t => t.id === 'host')?.sessionId) {
-    try {
-      const sid = await invoke<string>('spawn_host_terminal')
-      const hostTab = tabs.value.find(t => t.id === 'host')
-      if (hostTab) hostTab.sessionId = sid
-      activeSessionId = sid
-      setupPtyListener(sid)
-    } catch (e: any) {
-      term.value?.writeln(`\x1b[31mError: ${e}\x1b[0m`)
+
+  const tab = tabs.value.find(t => t.id === tabId)
+  if (tab?.sessionId) { activeSessionId = tab.sessionId; setupPtyListener(tab.sessionId); return }
+
+  try {
+    const sid = tabId === 'host'
+      ? await invoke<string>('spawn_host_terminal')
+      : await invoke<string>('spawn_container_terminal', { containerId: tabId })
+
+    if (!tab) {
+      tabs.value.push({ id: tabId, name: tabId === 'host' ? 'Host' : tabId.substring(0, 20), sessionId: sid })
+    } else {
+      tab.sessionId = sid
     }
+    activeSessionId = sid
+    setupPtyListener(sid)
+  } catch (e: any) {
+    term.value?.writeln(`\x1b[31mError: ${e}\x1b[0m`)
+  }
+}
+
+function addContainerTerminal() {
+  const cid = prompt('Container ID or name:')
+  if (cid) {
+    tabs.value.push({ id: cid, name: cid.substring(0, 20) })
+    activeTab.value = cid
+    openTerminal(cid)
   }
 }
 
@@ -151,7 +169,8 @@ onUnmounted(() => {
       >
         <i class="fa-solid fa-terminal" style="fontSize:11px;marginRight:6px"></i>{{ tab.name }}
       </span>
-      <button style="marginLeft:auto;width:28px;height:28px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;borderRadius:4px"
+      <button style="marginLeft:auto;width:28px;height:28px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;borderRadius:4px;marginRight:4px"
+        @click="addContainerTerminal" title="New container terminal">+</button>
         @click="closeTerminal" title="Close terminal">
         <i class="fa-solid fa-chevron-down"></i>
       </button>

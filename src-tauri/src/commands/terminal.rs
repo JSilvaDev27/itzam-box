@@ -85,6 +85,36 @@ pub async fn spawn_host_terminal(
 }
 
 #[tauri::command]
+pub async fn spawn_container_terminal(
+    app: AppHandle,
+    pty_state: State<'_, PtyManager>,
+    container_id: String,
+) -> Result<String, String> {
+    let pty_system = native_pty_system();
+    let pair = pty_system.openpty(PtySize { rows: 24, cols: 80, pixel_width: 0, pixel_height: 0 })
+        .map_err(|e| format!("PTY error: {}", e))?;
+
+    let mut cmd = CommandBuilder::new("docker");
+    cmd.args(&["exec", "-it", &container_id, "/bin/sh"]);
+    let child = pair.slave.spawn_command(cmd).or_else(|_| {
+        let mut cmd2 = CommandBuilder::new("docker");
+        cmd2.args(&["exec", "-it", &container_id, "/bin/bash"]);
+        pair.slave.spawn_command(cmd2)
+    }).map_err(|e| format!("Spawn error: {}", e))?;
+    drop(pair.slave);
+
+    let mut reader = pair.master.try_clone_reader().map_err(|e| format!("Reader: {}", e))?;
+    let writer = pair.master.take_writer().map_err(|e| format!("Writer: {}", e))?;
+
+    let id = { let mut n = pty_state.next_id.lock().map_err(|e| e.to_string())?; let id = format!("pty-{}", *n); *n += 1; id };
+    pty_state.sessions.lock().map_err(|e| e.to_string())?.insert(id.clone(), Arc::new(Mutex::new(PtySession { writer: Box::new(writer), child: None })));
+
+    let a = app.clone(); let i = id.clone();
+    std::thread::spawn(move || { let mut b = [0u8; 4096]; loop { match reader.read(&mut b) { Ok(0) => break, Ok(n) => { let _ = a.emit("pty-output", serde_json::json!({"id":i,"data":String::from_utf8_lossy(&b[..n])})); } Err(_) => break, } } });
+    Ok(id)
+}
+
+#[tauri::command]
 pub async fn pty_write(
     pty_state: State<'_, PtyManager>,
     id: String,
