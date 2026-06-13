@@ -12,6 +12,7 @@ use std::path::PathBuf;
 use db::manager::setup_database;
 use engine::docker_linux::DockerLinuxEngine;
 use engine::traits::ContainerEngine;
+use commands::terminal::PtyManager;
 
 /// Shared application state managed by Tauri
 pub struct AppState {
@@ -19,26 +20,19 @@ pub struct AppState {
     pub db: Arc<Mutex<rusqlite::Connection>>,
 }
 
-/// Resolve the application data directory for SQLite database
 fn app_data_dir() -> PathBuf {
-    // Use HOME/.itzambox for data storage
     if let Ok(home) = std::env::var("HOME") {
         let dir = PathBuf::from(home).join(".itzambox");
         std::fs::create_dir_all(&dir).ok();
         return dir;
     }
-    // Fallback to current directory
     PathBuf::from(".")
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_path = app_data_dir().join("itzambox.db");
-
-    // Initialize SQLite database
     let db = setup_database(db_path).expect("Failed to initialize database");
-
-    // Initialize Docker Engine adapter
     let engine = DockerLinuxEngine::new();
 
     let state = AppState {
@@ -52,6 +46,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_notification::init())
         .manage(state)
+        .manage(PtyManager::new())
         .invoke_handler(tauri::generate_handler![
             // Containers
             commands::containers::list_containers,
@@ -83,6 +78,11 @@ pub fn run() {
             commands::settings::set_config,
             // Host Metrics
             commands::host_metrics::get_host_metrics,
+            // Terminal
+            commands::terminal::spawn_host_terminal,
+            commands::terminal::pty_write,
+            commands::terminal::pty_resize,
+            commands::terminal::pty_close,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ItzamBox");

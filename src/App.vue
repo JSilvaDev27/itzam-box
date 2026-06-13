@@ -3,6 +3,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import TerminalPanel from './components/terminal/TerminalPanel.vue'
 
 const router = useRouter()
 const sidebarCollapsed = ref(false)
@@ -93,14 +94,7 @@ const navItems = [
       </main>
     </div>
 
-    <!-- Terminal (minimized) -->
-    <div class="terminal-min">
-      <span class="terminal-min-label">
-        <i class="fa-solid fa-chevron-up"></i> Terminal
-      </span>
-      <span class="terminal-min-label">
-        <i class="fa-solid fa-terminal"></i> Host
-      </span>
-    </div>
+    <!-- Terminal Panel -->
+    <TerminalPanel />
   </div>
 </template>
