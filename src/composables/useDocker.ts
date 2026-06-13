@@ -50,16 +50,19 @@ export function useDocker() {
   async function fetchImages() {
     try {
       images.value = await invoke<ImageInfo[]>('list_images')
+      error.value = null
     } catch (e: any) {
-      error.value = e.toString()
+      // Don't overwrite error from containers — images are non-critical
+      console.warn('Failed to fetch images:', e.toString())
     }
   }
 
   async function fetchVolumes() {
     try {
       volumes.value = await invoke<VolumeInfo[]>('list_volumes')
+      error.value = null
     } catch (e: any) {
-      error.value = e.toString()
+      console.warn('Failed to fetch volumes:', e.toString())
     }
   }
 
@@ -67,53 +70,75 @@ export function useDocker() {
     try {
       hostMetrics.value = await invoke<HostMetrics>('get_host_metrics')
     } catch (e: any) {
-      // Non-blocking - metrics may fail silently
+      console.warn('Failed to fetch host metrics:', e.toString())
     }
   }
 
   async function startContainer(id: string) {
-    await invoke('start_container', { id })
-    await fetchContainers()
+    try {
+      await invoke('start_container', { id })
+      await fetchContainers()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function stopContainer(id: string) {
-    await invoke('stop_container', { id })
-    await fetchContainers()
+    try {
+      await invoke('stop_container', { id })
+      await fetchContainers()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function restartContainer(id: string) {
-    await invoke('restart_container', { id })
-    await fetchContainers()
+    try {
+      await invoke('restart_container', { id })
+      await fetchContainers()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function pauseContainer(id: string) {
-    await invoke('pause_container', { id })
-    await fetchContainers()
+    try {
+      await invoke('pause_container', { id })
+      await fetchContainers()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function unpauseContainer(id: string) {
-    await invoke('unpause_container', { id })
-    await fetchContainers()
+    try {
+      await invoke('unpause_container', { id })
+      await fetchContainers()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function removeContainer(id: string, force = false, removeVolumes = false) {
-    await invoke('remove_container', { id, force, removeVolumes })
-    await fetchContainers()
+    try {
+      await invoke('remove_container', { id, force, removeVolumes })
+      await fetchContainers()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function pullImage(imageName: string) {
-    await invoke('pull_image', { imageName })
-    await fetchImages()
+    try {
+      await invoke('pull_image', { imageName })
+      await fetchImages()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function removeImage(id: string, force = false) {
-    await invoke('remove_image', { id, force })
-    await fetchImages()
+    try {
+      await invoke('remove_image', { id, force })
+      await fetchImages()
+    } catch (e: any) { error.value = e.toString() }
   }
 
   async function refreshAll() {
     loading.value = true
-    await Promise.allSettled([fetchContainers(), fetchImages(), fetchVolumes(), fetchHostMetrics()])
+    error.value = null
+    const results = await Promise.allSettled([fetchContainers(), fetchImages(), fetchVolumes(), fetchHostMetrics()])
+    // Only set error if containers failed (critical path)
+    const containersResult = results[0]
+    if (containersResult.status === 'rejected') {
+      error.value = containersResult.reason?.toString() || 'Failed to fetch containers'
+    }
     loading.value = false
   }
 
