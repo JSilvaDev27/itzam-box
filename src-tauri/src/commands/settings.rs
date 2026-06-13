@@ -1,8 +1,8 @@
 // ItzamBox — Settings Tauri Commands
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
-use tauri::State;
 use crate::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub fn get_config(state: State<'_, AppState>, key: String) -> Result<String, String> {
@@ -11,7 +11,8 @@ pub fn get_config(state: State<'_, AppState>, key: String) -> Result<String, Str
         "SELECT value FROM system_config WHERE key = ?1",
         [&key],
         |row| row.get(0),
-    ).map_err(|e| format!("Config key '{}' not found: {}", key, e))
+    )
+    .map_err(|e| format!("Config key '{}' not found: {}", key, e))
 }
 
 #[tauri::command]
@@ -20,6 +21,7 @@ pub fn set_config(state: State<'_, AppState>, key: String, value: String) -> Res
     conn.execute(
         "INSERT OR REPLACE INTO system_config (key, value) VALUES (?1, ?2)",
         rusqlite::params![key, value],
-    ).map_err(|e| e.to_string())?;
+    )
+    .map_err(|e| e.to_string())?;
     Ok(())
 }

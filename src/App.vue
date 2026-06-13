@@ -3,9 +3,11 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { invoke } from '@tauri-apps/api/core'
 import TerminalPanel from './components/terminal/TerminalPanel.vue'
 import ContextMenu from './components/shared/ContextMenu.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
+import OnboardingWizard from './components/onboarding/OnboardingWizard.vue'
 import { useTheme } from './composables/useTheme'
 import { useI18n } from './composables/useI18n'
 import { useNotifications } from './composables/useNotifications'
@@ -13,15 +15,27 @@ import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 
 const router = useRouter()
 const { isDark, init: initTheme, toggleTheme } = useTheme()
-const { locale, setLocale, t, init: initI18n } = useI18n()
-const { toasts, unreadCount, updateUnread, dismissToast } = useNotifications()
+const { t, init: initI18n } = useI18n()
+const { toasts, unreadCount, dismissToast } = useNotifications()
 const sidebarCollapsed = ref(false)
+const showOnboarding = ref(false)
 
 useKeyboardShortcuts()
 
 onMounted(async () => {
   await initTheme()
   await initI18n()
+
+  // Check if onboarding has been completed
+  try {
+    const completed = await invoke<string>('get_config', { key: 'onboarding_completed' })
+    if (completed !== 'true') {
+      showOnboarding.value = true
+    }
+  } catch {
+    // First run or config unavailable — show onboarding
+    showOnboarding.value = true
+  }
 })
 
 const navItems = [
@@ -128,5 +142,8 @@ const navItems = [
     <ContextMenu />
     <!-- Command Palette (Ctrl+K) -->
     <CommandPalette />
+
+    <!-- Onboarding Wizard (first run) -->
+    <OnboardingWizard v-if="showOnboarding" @done="showOnboarding = false" />
   </div>
 </template>

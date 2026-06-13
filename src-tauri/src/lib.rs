@@ -1,18 +1,18 @@
 // ItzamBox — Application Library Entry Point
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
+pub mod commands;
 pub mod db;
 pub mod engine;
-pub mod commands;
 pub mod utils;
 
-use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
+use commands::terminal::PtyManager;
 use db::manager::setup_database;
 use engine::docker_linux::DockerLinuxEngine;
 use engine::traits::ContainerEngine;
-use commands::terminal::PtyManager;
 
 /// Shared application state managed by Tauri
 pub struct AppState {

@@ -2,7 +2,7 @@
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
 import { invoke } from '@tauri-apps/api/core'
-import { ref, type Ref } from 'vue'
+import { ref } from 'vue'
 
 export interface ContainerInfo {
   id: string; name: string; image: string; status: string; state: string
@@ -18,6 +18,10 @@ export interface ImageInfo {
 
 export interface VolumeInfo {
   name: string; driver: string; mountpoint: string
+}
+
+export interface NetworkInfo {
+  id: string; name: string; driver: string; scope: string
 }
 
 export interface HostMetrics {

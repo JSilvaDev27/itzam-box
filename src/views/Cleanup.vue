@@ -3,22 +3,54 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
+import ErrorState from '../components/shared/ErrorState.vue'
 
 interface DiskUsage { containers_count: number; containers_size_bytes: number; images_count: number; images_size_bytes: number; volumes_count: number; volumes_size_bytes: number; build_cache_size_bytes: number; total_reclaimable_bytes: number }
 const usage = ref<DiskUsage | null>(null)
+const loading = ref(false)
+const error = ref<string | null>(null)
 
-onMounted(fetchUsage)
-async function fetchUsage() { try { usage.value = await invoke<DiskUsage>('get_disk_usage') } catch(e: any) { alert(e.toString()) } }
+onMounted(() => loadData())
+
+async function loadData() {
+  loading.value = true
+  error.value = null
+  try { usage.value = await invoke<DiskUsage>('get_disk_usage') } catch(e: any) { error.value = e.toString() }
+  loading.value = false
+}
+
 function fmt(b: number) { if (b > 1e9) return (b/1e9).toFixed(1)+' GB'; return Math.round(b/1e6)+' MB' }
+
 async function prune(type: string) {
   if (!confirm(`Prune ${type}? This cannot be undone.`)) return
-  try { await invoke(`prune_${type}`); await fetchUsage() } catch(e: any) { alert(e.toString()) }
+  try { await invoke(`prune_${type}`); await loadData() } catch(e: any) { error.value = e.toString() }
 }
 </script>
+
 <template>
   <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Cleanup</span></div>
-  <h1 class="text-h1">System Cleanup</h1>
-  <div class="metrics-grid" v-if="usage">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <h1 class="text-h1">System Cleanup</h1>
+    <button class="btn btn-secondary" @click="loadData" :disabled="loading">
+      <i class="fa-solid fa-rotate" :class="{ 'fa-spin': loading }"></i> Refresh
+    </button>
+  </div>
+
+  <!-- Loading state (A.6.1) -->
+  <SkeletonLoader v-if="loading && !usage" variant="metric-grid" :count="4" />
+
+  <!-- Error state (A.6.3) -->
+  <ErrorState
+    v-if="error"
+    :message="'Error fetching disk usage'"
+    :suggestion="'Docker disk usage report requires a running Docker daemon.'"
+    :detail="error"
+    @retry="loadData"
+  />
+
+  <div v-if="usage && !loading && !error" class="metrics-grid">
     <div class="metric-card">
       <div class="metric-icon cyan"><i class="fa-solid fa-cubes"></i></div>
       <div class="metric-label">Containers</div>
@@ -47,5 +79,4 @@ async function prune(type: string) {
       <button class="btn btn-danger btn-sm" @click="prune('containers');prune('images');prune('volumes');prune('networks')"><i class="fa-solid fa-broom"></i> Prune All</button>
     </div>
   </div>
-  <div v-else class="section" style="padding:40px;text-align:center"><span style="color:var(--text-muted)">Loading disk usage...</span></div>
 </template>

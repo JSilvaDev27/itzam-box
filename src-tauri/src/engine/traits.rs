@@ -1,11 +1,12 @@
 // ItzamBox — ContainerEngine Trait (Port Interface)
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
+use crate::engine::types::*;
 use async_trait::async_trait;
 use std::path::PathBuf;
-use crate::engine::types::*;
 
 #[async_trait]
+#[allow(clippy::too_many_arguments)]
 pub trait ContainerEngine: Send + Sync {
     // ─── Diagnostics ───
     async fn check_engine_status(&self) -> Result<bool, String>;
@@ -22,21 +23,52 @@ pub trait ContainerEngine: Send + Sync {
     async fn unpause_container(&self, id: &str) -> Result<(), String>;
     async fn kill_container(&self, id: &str, signal: &str) -> Result<(), String>;
     async fn rename_container(&self, id: &str, new_name: &str) -> Result<(), String>;
-    async fn remove_container(&self, id: &str, force: bool, remove_volumes: bool) -> Result<(), String>;
+    async fn remove_container(
+        &self,
+        id: &str,
+        force: bool,
+        remove_volumes: bool,
+    ) -> Result<(), String>;
     async fn get_container_stats(&self, id: &str) -> Result<ContainerStats, String>;
 
     // ─── Container Creation ───
     async fn create_and_run_container(
-        &self, image: &str, name: Option<&str>, ports: Vec<PortMapping>,
-        volumes: Vec<String>, env_vars: Vec<String>, network: Option<&str>,
-        restart_policy: Option<&str>, command: Option<Vec<String>>, detach: bool,
+        &self,
+        image: &str,
+        name: Option<&str>,
+        ports: Vec<PortMapping>,
+        volumes: Vec<String>,
+        env_vars: Vec<String>,
+        network: Option<&str>,
+        restart_policy: Option<&str>,
+        command: Option<Vec<String>>,
+        detach: bool,
     ) -> Result<String, String>;
 
     // ─── File Explorer ───
-    async fn list_container_dir(&self, container_id: &str, path: &str) -> Result<Vec<FileMetadata>, String>;
-    async fn download_file_from_container(&self, container_id: &str, remote_path: &str, local_dest: PathBuf) -> Result<(), String>;
-    async fn upload_file_to_container(&self, container_id: &str, local_src: PathBuf, remote_dest: &str) -> Result<(), String>;
-    async fn read_file_preview(&self, container_id: &str, remote_path: &str, max_bytes: usize) -> Result<String, String>;
+    async fn list_container_dir(
+        &self,
+        container_id: &str,
+        path: &str,
+    ) -> Result<Vec<FileMetadata>, String>;
+    async fn download_file_from_container(
+        &self,
+        container_id: &str,
+        remote_path: &str,
+        local_dest: PathBuf,
+    ) -> Result<(), String>;
+    async fn upload_file_to_container(
+        &self,
+        container_id: &str,
+        local_src: PathBuf,
+        remote_dest: &str,
+    ) -> Result<(), String>;
+    async fn read_file_preview(
+        &self,
+        container_id: &str,
+        remote_path: &str,
+        max_bytes: usize,
+    ) -> Result<String, String>;
 
     // ─── Images ───
     async fn list_images(&self) -> Result<Vec<ImageInfo>, String>;
@@ -53,7 +85,13 @@ pub trait ContainerEngine: Send + Sync {
 
     // ─── Networks ───
     async fn list_networks(&self) -> Result<Vec<NetworkInfo>, String>;
-    async fn create_network(&self, name: &str, driver: &str, subnet: Option<&str>, gateway: Option<&str>) -> Result<(), String>;
+    async fn create_network(
+        &self,
+        name: &str,
+        driver: &str,
+        subnet: Option<&str>,
+        gateway: Option<&str>,
+    ) -> Result<(), String>;
     async fn remove_network(&self, id: &str) -> Result<(), String>;
 
     // ─── Cleanup ───

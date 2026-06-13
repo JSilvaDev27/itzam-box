@@ -3,7 +3,6 @@
 <script setup lang="ts">
 import { watch, onMounted, onUnmounted } from 'vue'
 import { useContextMenu } from '../../composables/useContextMenu'
-import type { ContextMenuItem } from '../../composables/useContextMenu'
 
 const { state, hide, handleAction } = useContextMenu()
 

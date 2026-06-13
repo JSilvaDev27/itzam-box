@@ -4,6 +4,9 @@
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
+import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
+import EmptyState from '../components/shared/EmptyState.vue'
+import ErrorState from '../components/shared/ErrorState.vue'
 
 const { containers, images, volumes, hostMetrics, loading, error, refreshAll,
         startContainer, stopContainer, restartContainer, removeContainer } = useDocker()
@@ -13,7 +16,7 @@ let interval: number | undefined
 
 onMounted(async () => {
   await refreshAll()
-  interval = window.setInterval(() => refreshAll(), 5000) // Refresh every 5s
+  interval = window.setInterval(() => refreshAll(), 5000)
 })
 
 onUnmounted(() => {
@@ -32,6 +35,7 @@ const uptimeDays = computed(() => {
   const hours = Math.floor((hostMetrics.value.uptime_seconds % 86400) / 3600)
   return `${days}d ${hours}h`
 })
+const isEmpty = computed(() => containers.value.length === 0 && !loading.value && !error.value)
 
 function formatBytes(bytes: number): string {
   if (bytes > 1e9) return (bytes / 1e9).toFixed(1) + ' GB'
@@ -54,21 +58,28 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     <h1 class="text-h1">Dashboard</h1>
     <div style="display:flex;gap:8px;">
       <button class="btn btn-secondary" @click="refreshAll" :disabled="loading">
-        <i class="fa-solid fa-rotate"></i> {{ loading ? 'Loading...' : 'Refresh' }}
+        <i class="fa-solid fa-rotate" :class="{ 'fa-spin': loading }"></i> {{ loading ? 'Loading...' : 'Refresh' }}
       </button>
     </div>
   </div>
 
-  <!-- Error -->
-  <div v-if="error" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);padding:16px;color:var(--accent-red);font-size:13px">
-    <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
-    <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">
-      Is Docker running? Try: <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:3px;font-family:var(--font-mono)">sudo systemctl start docker</code>
-    </div>
-  </div>
+  <!-- Loading state (A.6.1) -->
+  <SkeletonLoader v-if="loading && !error && containers.length === 0" variant="metric-grid" :count="4" />
+  <SkeletonLoader v-if="loading && !error && containers.length === 0" variant="table-row" :rows="3" />
+
+  <!-- Error state (A.6.3) -->
+  <ErrorState
+    v-if="error"
+    :message="'Error connecting to Docker'"
+    :suggestion="'Make sure Docker is running. Try: sudo systemctl start docker'"
+    :detail="error"
+    detail-label="Error details"
+    icon="fa-solid fa-circle-exclamation"
+    @retry="refreshAll"
+  />
 
   <!-- Metric Cards -->
-  <div v-if="!error" class="metrics-grid">
+  <div v-if="!loading && !error" class="metrics-grid">
     <div class="metric-card">
       <div class="metric-icon green"><i class="fa-solid fa-cubes"></i></div>
       <div class="metric-label">Active Containers</div>
@@ -100,7 +111,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   </div>
 
   <!-- Host Info -->
-  <div v-if="hostMetrics && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+  <div v-if="hostMetrics && !error && !loading" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <div class="section">
       <div class="section-header"><span class="section-title"><i class="fa-solid fa-server" style="color:var(--accent-cyan);margin-right:8px"></i> Host</span></div>
       <div style="padding:16px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
@@ -121,7 +132,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   </div>
 
   <!-- Recent Containers -->
-  <div v-if="containers.length > 0 && !error" class="section">
+  <div v-if="containers.length > 0 && !error && !loading" class="section">
     <div class="section-header">
       <span class="section-title">Containers</span>
       <div class="table-toolbar">
@@ -144,13 +155,15 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
-  <!-- Empty state -->
-  <div v-if="containers.length === 0 && !error && !loading" class="section">
-    <div style="padding:60px;text-align:center;color:var(--text-muted)">
-      <i class="fa-solid fa-docker" style="font-size:48px;margin-bottom:16px;opacity:0.3"></i>
-      <p style="font-size:14px;margin-bottom:4px">No containers running</p>
-      <p style="font-size:12px;margin-bottom:16px">Pull an image and create your first container:</p>
-      <code style="background:var(--bg-tertiary);padding:4px 12px;border-radius:4px;font-family:var(--font-mono);font-size:12px">docker run -d --name my-app nginx:latest</code>
-    </div>
-  </div>
+  <!-- Empty state (A.6.2) -->
+  <EmptyState
+    v-if="isEmpty"
+    icon="fa-solid fa-docker"
+    title="No containers running"
+    description="Pull an image and create your first container to get started."
+    action-label="Pull Image"
+    secondary-label="View Images"
+    @action="$router.push('/images')"
+    @secondary="$router.push('/images')"
+  />
 </template>

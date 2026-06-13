@@ -1,7 +1,7 @@
 <!-- ItzamBox — Terminal Panel (xterm.js + WebGL)
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onUnmounted, nextTick } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { listen } from '@tauri-apps/api/event'
 import { Terminal } from 'xterm'

@@ -1,9 +1,9 @@
 // ItzamBox — Cleanup / Disk Commands
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
-use tauri::State;
-use crate::AppState;
 use crate::engine::types::DiskUsageSummary;
+use crate::AppState;
+use tauri::State;
 
 #[tauri::command]
 pub async fn get_disk_usage(state: State<'_, AppState>) -> Result<DiskUsageSummary, String> {
@@ -46,6 +46,10 @@ pub async fn prune_networks(state: State<'_, AppState>) -> Result<u64, String> {
 }
 
 #[tauri::command]
-pub async fn list_container_dir(state: State<'_, AppState>, container_id: String, path: String) -> Result<Vec<crate::engine::types::FileMetadata>, String> {
+pub async fn list_container_dir(
+    state: State<'_, AppState>,
+    container_id: String,
+    path: String,
+) -> Result<Vec<crate::engine::types::FileMetadata>, String> {
     state.engine.list_container_dir(&container_id, &path).await
 }

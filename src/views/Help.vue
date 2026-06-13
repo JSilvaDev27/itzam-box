@@ -3,27 +3,36 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 
-const dockerVersion = ref('Checking...')
-const hostname = ref('...')
+const dockerVersion = ref<string | null>(null)
+const hostname = ref<string | null>(null)
+const loading = ref(true)
 
 onMounted(async () => {
-  try { dockerVersion.value = await invoke<string>('get_engine_version') } catch { dockerVersion.value = 'Not connected' }
+  try { dockerVersion.value = await invoke<string>('get_engine_version') } catch { dockerVersion.value = null }
   try { const m: any = await invoke('get_host_metrics'); hostname.value = m.hostname } catch { /* ok */ }
+  loading.value = false
 })
 </script>
 <template>
   <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Help</span></div>
   <h1 class="text-h1">Help</h1>
-  <div style="display:flex;flex-direction:column;gap:16px;max-width:700px">
+
+  <!-- Loading state (A.6.1) -->
+  <div v-if="loading" style="max-width:700px">
+    <SkeletonLoader variant="text" :lines="5" />
+  </div>
+
+  <div v-else style="display:flex;flex-direction:column;gap:16px;max-width:700px">
 
     <div class="section">
       <div class="section-header"><span class="section-title"><i class="fa-solid fa-circle-info" style="color:var(--accent-cyan);margin-right:8px"></i> About ItzamBox</span></div>
       <div style="padding:16px 20px;font-size:13px;display:flex;flex-direction:column;gap:6px">
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Version</span><span style="font-family:var(--font-mono)">1.0.0</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Tauri</span><span style="font-family:var(--font-mono)">v2.11</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Docker Engine</span><span style="font-family:var(--font-mono)">{{ dockerVersion }}</span></div>
-        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Host</span><span style="font-family:var(--font-mono)">{{ hostname }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Docker Engine</span><span style="font-family:var(--font-mono)">{{ dockerVersion || 'Not connected' }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Host</span><span style="font-family:var(--font-mono)">{{ hostname || '...' }}</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">License</span><span>GNU GPL v3.0</span></div>
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">© 2026</span><span>SodigTech</span></div>
       </div>
