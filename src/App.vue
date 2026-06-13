@@ -1,19 +1,26 @@
-<!-- ItzamBox — Local and open-source alternative to Docker Desktop -->
-<!-- Copyright (C) 2026 SodigTech — GPL-3.0 -->
+<!-- ItzamBox — Root Application Shell
+     Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TerminalPanel from './components/terminal/TerminalPanel.vue'
+import { useTheme } from './composables/useTheme'
+import { useI18n } from './composables/useI18n'
+import { useNotifications } from './composables/useNotifications'
+import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
 
 const router = useRouter()
+const { isDark, init: initTheme, toggleTheme } = useTheme()
+const { locale, setLocale, t, init: initI18n } = useI18n()
+const { toasts, unreadCount, updateUnread, dismissToast } = useNotifications()
 const sidebarCollapsed = ref(false)
-const isDark = ref(true)
 
-function toggleSidebar() { sidebarCollapsed.value = !sidebarCollapsed.value }
-function toggleTheme() {
-  isDark.value = !isDark.value
-  document.documentElement.setAttribute('data-theme', isDark.value ? 'dark' : 'light')
-}
+useKeyboardShortcuts()
+
+onMounted(async () => {
+  await initTheme()
+  await initI18n()
+})
 
 const navItems = [
   { to: '/', icon: 'fa-chart-line', label: 'Dashboard' },
@@ -37,10 +44,11 @@ const navItems = [
       <div class="header-right">
         <div class="search-bar">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" placeholder="Search... (Ctrl+K)">
+          <input type="text" :placeholder="t.common.search || 'Search...'">
         </div>
-        <button class="header-btn" title="Notifications">
+        <button class="header-btn" title="Notifications" style="position:relative">
           <i class="fa-solid fa-bell"></i>
+          <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
         </button>
         <button class="header-btn" @click="toggleTheme" title="Toggle theme">
           <i :class="isDark ? 'fa-solid fa-moon' : 'fa-solid fa-sun'"></i>
@@ -53,42 +61,36 @@ const navItems = [
 
     <!-- Main Layout -->
     <div class="main-layout">
-      <!-- Sidebar -->
       <aside :class="['sidebar', { collapsed: sidebarCollapsed }]">
         <nav class="sidebar-nav">
-          <router-link
-            v-for="item in navItems" :key="item.to"
-            :to="item.to" class="nav-item"
-          >
+          <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="nav-item">
             <i :class="'fa-solid ' + item.icon"></i>
-            <span class="nav-label">{{ sidebarCollapsed ? '' : item.label }}</span>
+            <span class="nav-label" v-show="!sidebarCollapsed">{{ item.label }}</span>
           </router-link>
           <div class="nav-divider"></div>
           <router-link to="/settings" class="nav-item">
             <i class="fa-solid fa-gear"></i>
-            <span class="nav-label">{{ sidebarCollapsed ? '' : 'Settings' }}</span>
+            <span class="nav-label" v-show="!sidebarCollapsed">Settings</span>
           </router-link>
           <router-link to="/help" class="nav-item">
             <i class="fa-solid fa-circle-question"></i>
-            <span class="nav-label">{{ sidebarCollapsed ? '' : 'Help' }}</span>
+            <span class="nav-label" v-show="!sidebarCollapsed">Help</span>
           </router-link>
         </nav>
-        <!-- Host widgets -->
         <div class="sidebar-widgets">
           <div class="host-widget">
             <div class="host-widget-label">CPU</div>
-            <div class="host-widget-value" style="color: var(--accent-green)">--</div>
+            <div class="host-widget-value" style="color:var(--accent-green)">--</div>
             <div class="host-widget-bar"><div class="host-widget-bar-fill" style="width:0%"></div></div>
           </div>
           <div class="host-widget">
             <div class="host-widget-label">RAM</div>
-            <div class="host-widget-value" style="color: var(--accent-green)">--</div>
+            <div class="host-widget-value" style="color:var(--accent-green)">--</div>
             <div class="host-widget-bar"><div class="host-widget-bar-fill" style="width:0%"></div></div>
           </div>
         </div>
       </aside>
 
-      <!-- Content -->
       <main class="content">
         <router-view />
       </main>
@@ -96,5 +98,28 @@ const navItems = [
 
     <!-- Terminal Panel -->
     <TerminalPanel />
+
+    <!-- Toast Notifications -->
+    <div style="position:fixed;top:60px;right:16px;z-index:200;display:flex;flex-direction:column;gap:8px;max-width:360px">
+      <div v-for="toast in toasts" :key="toast.id"
+        :style="{
+          padding:'12px 16px', borderRadius:'var(--radius-md)',
+          background: 'var(--bg-secondary)', border:'1px solid var(--border-color)',
+          boxShadow:'var(--shadow-lg)', fontSize:'13px',
+          borderLeft: '3px solid ' + (toast.type === 'success' ? 'var(--accent-green)' : toast.type === 'error' ? 'var(--accent-red)' : toast.type === 'warning' ? 'var(--accent-yellow)' : 'var(--accent-blue)'),
+          animation:'fadeIn 0.3s ease-out',
+        }"
+      >
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <i :class="toast.type === 'success' ? 'fa-solid fa-circle-check' : toast.type === 'error' ? 'fa-solid fa-circle-xmark' : toast.type === 'warning' ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-circle-info'"
+              :style="{color: toast.type === 'success' ? 'var(--accent-green)' : toast.type === 'error' ? 'var(--accent-red)' : toast.type === 'warning' ? 'var(--accent-yellow)' : 'var(--accent-blue)', marginRight:'8px'}"></i>
+            <strong>{{ toast.title }}</strong>
+            <span style="color:var(--text-muted);marginLeft:8px">{{ toast.message }}</span>
+          </div>
+          <button @click="dismissToast(toast.id)" style="background:none;border:none;color:var(--text-muted);cursor:pointer;fontSize:14px">&times;</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
