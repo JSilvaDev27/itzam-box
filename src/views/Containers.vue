@@ -118,7 +118,6 @@ async function handleAction(id: string, action: string) {
             <button v-if="c.state === 'stopped' || c.state === 'exited'" class="action-btn" @click.stop="handleAction(c.id, 'start')"><i class="fa-solid fa-play"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'stop')"><i class="fa-solid fa-stop"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'restart')"><i class="fa-solid fa-rotate-right"></i></button>
-            <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'pause')"><i class="fa-solid fa-pause"></i></button>
             <button v-if="c.state !== 'running'" class="action-btn" @click.stop="handleAction(c.id, 'remove')"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         </div>
@@ -140,7 +139,6 @@ async function handleAction(id: string, action: string) {
             <button v-if="c.state === 'stopped' || c.state === 'exited'" class="action-btn" @click.stop="handleAction(c.id, 'start')"><i class="fa-solid fa-play"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'stop')"><i class="fa-solid fa-stop"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'restart')"><i class="fa-solid fa-rotate-right"></i></button>
-            <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'pause')"><i class="fa-solid fa-pause"></i></button>
             <button v-if="c.state !== 'running'" class="action-btn" @click.stop="handleAction(c.id, 'remove')"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         </div>
