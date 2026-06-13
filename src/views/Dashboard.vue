@@ -60,8 +60,8 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   <div style="display:flex;align-items:center;justify-content:space-between;">
     <h1 class="text-h1">Dashboard</h1>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-secondary" @click="refreshAll" :disabled="loading">
-        <i class="fa-solid fa-rotate" :class="{ 'fa-spin': loading }"></i> {{ loading ? 'Loading...' : 'Refresh' }}
+      <button class="btn btn-secondary" @click="refreshAll">
+        <i class="fa-solid fa-rotate"></i> Refresh
       </button>
     </div>
   </div>
@@ -82,7 +82,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   />
 
   <!-- Metric Cards — keep visible during refresh, fade slightly -->
-  <div v-show="firstLoadDone && !error" class="metrics-grid" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
+  <div v-show="firstLoadDone && !error" class="metrics-grid">
     <div class="metric-card">
       <div class="metric-icon green"><i class="fa-solid fa-cubes"></i></div>
       <div class="metric-label">Active Containers</div>
@@ -114,7 +114,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   </div>
 
   <!-- Host Info — keep visible during refresh, guard inner expressions -->
-  <div v-show="hostMetrics && firstLoadDone && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
+  <div v-show="hostMetrics && firstLoadDone && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <template v-if="hostMetrics">
     <div class="section">
       <div class="section-header"><span class="section-title"><i class="fa-solid fa-server" style="color:var(--accent-cyan);margin-right:8px"></i> Host</span></div>
@@ -137,7 +137,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   </div>
 
   <!-- Recent Containers — keep visible during refresh -->
-  <div v-show="containers.length > 0 && firstLoadDone && !error" class="section" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
+  <div v-show="containers.length > 0 && firstLoadDone && !error" class="section">
     <div class="section-header">
       <span class="section-title">Containers</span>
       <div class="table-toolbar">
