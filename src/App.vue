@@ -4,6 +4,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import TerminalPanel from './components/terminal/TerminalPanel.vue'
+import ContextMenu from './components/shared/ContextMenu.vue'
 import { useTheme } from './composables/useTheme'
 import { useI18n } from './composables/useI18n'
 import { useNotifications } from './composables/useNotifications'
@@ -121,5 +122,8 @@ const navItems = [
         </div>
       </div>
     </div>
+
+    <!-- Global Context Menu -->
+    <ContextMenu />
   </div>
 </template>

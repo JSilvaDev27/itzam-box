@@ -7,7 +7,10 @@ import { listen } from '@tauri-apps/api/event'
 import { Terminal } from 'xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebglAddon } from '@xterm/addon-webgl'
+import { useContextMenu, terminalContextMenu } from '../../composables/useContextMenu'
 import 'xterm/css/xterm.css'
+
+const { show } = useContextMenu()
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -97,6 +100,22 @@ function closeTerminal() {
   if (unlisten) { unlisten(); unlisten = null }
 }
 
+function onTerminalContextMenu(e: MouseEvent) {
+  const sel = term.value?.getSelection()
+  show(e, terminalContextMenu({
+    onCopy: () => {
+      if (sel) navigator.clipboard.writeText(sel)
+      else term.value?.selectAll()
+    },
+    onPaste: () => {
+      navigator.clipboard.readText().then(text => {
+        if (activeSessionId) invoke('pty_write', { id: activeSessionId, data: text })
+      })
+    },
+    onClear: () => term.value?.clear(),
+  }))
+}
+
 onUnmounted(() => {
   if (unlisten) unlisten()
   term.value?.dispose()
@@ -137,6 +156,6 @@ onUnmounted(() => {
         <i class="fa-solid fa-chevron-down"></i>
       </button>
     </div>
-    <div ref="terminalRef" style="flex:1;overflow:hidden"></div>
+    <div ref="terminalRef" style="flex:1;overflow:hidden" @contextmenu="onTerminalContextMenu"></div>
   </div>
 </template>

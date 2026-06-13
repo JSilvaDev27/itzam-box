@@ -3,9 +3,11 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed } from 'vue'
 import { useDocker } from '../composables/useDocker'
+import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
 
 const { containers, images, volumes, hostMetrics, loading, error, refreshAll,
         startContainer, stopContainer, restartContainer, removeContainer } = useDocker()
+const { show } = useContextMenu()
 
 let interval: number | undefined
 
@@ -35,6 +37,10 @@ function formatBytes(bytes: number): string {
   if (bytes > 1e9) return (bytes / 1e9).toFixed(1) + ' GB'
   if (bytes > 1e6) return Math.round(bytes / 1e6) + ' MB'
   return Math.round(bytes / 1e3) + ' KB'
+}
+
+function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
+  show(e, containerContextMenu(c))
 }
 </script>
 
@@ -122,7 +128,7 @@ function formatBytes(bytes: number): string {
         <span style="font-size:12px;color:var(--text-muted)">{{ containers.length }} total</span>
       </div>
     </div>
-    <div v-for="c in containers.slice(0, 10)" :key="c.id" class="data-row">
+    <div v-for="c in containers.slice(0, 10)" :key="c.id" class="data-row" @contextmenu="onContainerContextMenu($event, c)">
       <span :class="['status-dot', c.state === 'running' ? 'status-dot--running' : c.state === 'paused' ? 'status-dot--paused' : 'status-dot--stopped']"></span>
       <div class="row-info">
         <div class="row-name">{{ c.name }}</div>

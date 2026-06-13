@@ -3,8 +3,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useDocker } from '../composables/useDocker'
+import { useContextMenu, imageContextMenu } from '../composables/useContextMenu'
 
 const { images, loading, fetchImages, pullImage, removeImage } = useDocker()
+const { show } = useContextMenu()
 const showPullModal = ref(false)
 const pullImageName = ref('')
 const pulling = ref(false)
@@ -54,7 +56,7 @@ function formatBytes(b: number): string {
       <i class="fa-solid fa-layer-group" style="font-size:48px;margin-bottom:16px;opacity:0.3"></i>
       <p style="font-size:14px">No images found. Pull one to get started.</p>
     </div>
-    <div v-for="img in images" :key="img.id" class="data-row">
+    <div v-for="img in images" :key="img.id" class="data-row" @contextmenu="show($event, imageContextMenu(img))">
       <div class="row-info">
         <div class="row-name">{{ img.repository }}</div>
         <div class="row-meta">{{ img.tag }} · {{ formatBytes(img.size_bytes) }}</div>
