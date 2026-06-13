@@ -12,3 +12,4 @@ pub mod compose;
 pub mod scanner;
 pub mod events;
 pub mod settings;
+pub mod cleanup;

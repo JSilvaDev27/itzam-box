@@ -83,6 +83,16 @@ pub fn run() {
             commands::terminal::pty_write,
             commands::terminal::pty_resize,
             commands::terminal::pty_close,
+            // Cleanup & Engine Info
+            commands::cleanup::get_disk_usage,
+            commands::cleanup::get_engine_version,
+            commands::cleanup::get_engine_info,
+            commands::cleanup::check_engine_status,
+            commands::cleanup::prune_containers,
+            commands::cleanup::prune_images,
+            commands::cleanup::prune_volumes,
+            commands::cleanup::prune_networks,
+            commands::cleanup::list_container_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ItzamBox");
