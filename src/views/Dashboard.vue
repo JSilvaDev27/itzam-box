@@ -1,7 +1,7 @@
 <!-- ItzamBox — Dashboard View
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed } from 'vue'
+import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
@@ -12,10 +12,13 @@ const { containers, images, volumes, hostMetrics, loading, error, refreshAll,
         startContainer, stopContainer, restartContainer, removeContainer } = useDocker()
 const { show } = useContextMenu()
 
+const firstLoadDone = ref(false)
+
 let interval: number | undefined
 
 onMounted(async () => {
   await refreshAll()
+  firstLoadDone.value = true
   interval = window.setInterval(() => refreshAll(), 5000)
 })
 
@@ -63,13 +66,13 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
-  <!-- Loading state (A.6.1) -->
-  <SkeletonLoader v-if="loading && !error && containers.length === 0" variant="metric-grid" :count="4" />
-  <SkeletonLoader v-if="loading && !error && containers.length === 0" variant="table-row" :rows="3" />
+  <!-- Loading state (A.6.1) — only on first load, not on refresh -->
+  <SkeletonLoader v-if="loading && !firstLoadDone" variant="metric-grid" :count="4" />
+  <SkeletonLoader v-if="loading && !firstLoadDone" variant="table-row" :rows="3" />
 
-  <!-- Error state (A.6.3) -->
+  <!-- Error state (A.6.3) — only if we've loaded at least once -->
   <ErrorState
-    v-if="error"
+    v-if="error && firstLoadDone"
     :message="'Error connecting to Docker'"
     :suggestion="'Make sure Docker is running. Try: sudo systemctl start docker'"
     :detail="error"
@@ -78,8 +81,8 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     @retry="refreshAll"
   />
 
-  <!-- Metric Cards -->
-  <div v-if="!loading && !error" class="metrics-grid">
+  <!-- Metric Cards — keep visible during refresh, fade slightly -->
+  <div v-show="firstLoadDone && !error" class="metrics-grid" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
     <div class="metric-card">
       <div class="metric-icon green"><i class="fa-solid fa-cubes"></i></div>
       <div class="metric-label">Active Containers</div>
@@ -110,8 +113,8 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
-  <!-- Host Info -->
-  <div v-if="hostMetrics && !error && !loading" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+  <!-- Host Info — keep visible during refresh -->
+  <div v-show="hostMetrics && firstLoadDone && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
     <div class="section">
       <div class="section-header"><span class="section-title"><i class="fa-solid fa-server" style="color:var(--accent-cyan);margin-right:8px"></i> Host</span></div>
       <div style="padding:16px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
@@ -131,8 +134,8 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
-  <!-- Recent Containers -->
-  <div v-if="containers.length > 0 && !error && !loading" class="section">
+  <!-- Recent Containers — keep visible during refresh -->
+  <div v-show="containers.length > 0 && firstLoadDone && !error" class="section" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
     <div class="section-header">
       <span class="section-title">Containers</span>
       <div class="table-toolbar">
@@ -155,9 +158,9 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
-  <!-- Empty state (A.6.2) -->
+  <!-- Empty state (A.6.2) — only if fully loaded and truly empty -->
   <EmptyState
-    v-if="isEmpty"
+    v-if="isEmpty && firstLoadDone"
     icon="fa-solid fa-docker"
     title="No containers running"
     description="Pull an image and create your first container to get started."

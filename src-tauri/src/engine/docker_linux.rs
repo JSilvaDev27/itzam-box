@@ -525,7 +525,11 @@ impl ContainerEngine for DockerLinuxEngine {
     async fn get_host_metrics(&self) -> Result<HostMetrics, String> {
         use sysinfo::System;
         let mut sys = System::new_all();
+        // sysinfo needs two measurements to calculate CPU usage.
+        // First refresh gathers baseline, wait, then second refresh computes delta.
         sys.refresh_all();
+        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
+        sys.refresh_cpu_all();
         let cpu = sys.global_cpu_usage() as f64;
         Ok(HostMetrics {
             cpu_usage_percent: cpu,
