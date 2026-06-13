@@ -3,13 +3,97 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { invoke } from '@tauri-apps/api/core'
 import { useDocker } from '../../composables/useDocker'
+import { useTheme } from '../../composables/useTheme'
+import { useNotifications } from '../../composables/useNotifications'
 
 const router = useRouter()
 const visible = ref(false)
 const query = ref('')
 const selectedIdx = ref(0)
 const { containers, images, fetchContainers, fetchImages } = useDocker()
+const { toggleTheme, isDark } = useTheme()
+const { success, error, info, warning } = useNotifications()
+
+// ── Executable action functions ──────────────────────────────────
+
+async function pullImageAction() {
+  const name = prompt('Image name to pull (e.g., nginx:latest):')
+  if (!name || !name.trim()) return
+  const imageName = name.trim()
+  info('Pulling image…', `Downloading ${imageName}`)
+  try {
+    await invoke('pull_image', { imageName })
+    await fetchImages()
+    success('Image pulled', `${imageName} downloaded successfully`)
+  } catch (e: any) {
+    error('Pull failed', e?.toString?.() || String(e))
+  }
+}
+
+async function pruneAllAction() {
+  if (!confirm('This will remove all unused containers, images, volumes, and networks. Continue?')) return
+  info('Pruning…', 'Cleaning up unused Docker resources')
+  let summary: string[] = []
+  try {
+    const c = await invoke<number>('prune_containers')
+    if (c > 0) summary.push(`${c} container(s)`)
+  } catch (e: any) { warning('Prune containers', e?.toString?.() || String(e)) }
+  try {
+    const i = await invoke<number>('prune_images', { danglingOnly: false })
+    if (i > 0) summary.push(`${i} image(s)`)
+  } catch (e: any) { warning('Prune images', e?.toString?.() || String(e)) }
+  try {
+    const v = await invoke<number>('prune_volumes')
+    if (v > 0) summary.push(`${v} volume(s)`)
+  } catch (e: any) { warning('Prune volumes', e?.toString?.() || String(e)) }
+  try {
+    const n = await invoke<number>('prune_networks')
+    if (n > 0) summary.push(`${n} network(s)`)
+  } catch (e: any) { warning('Prune networks', e?.toString?.() || String(e)) }
+  if (summary.length) {
+    success('Prune complete', `Reclaimed: ${summary.join(', ')}`)
+  } else {
+    info('Prune complete', 'Nothing to prune — system already clean')
+  }
+  await fetchContainers(true)
+}
+
+async function startAllStoppedAction() {
+  const stopped = containers.value.filter(c => c.state === 'exited')
+  if (!stopped.length) {
+    info('No stopped containers', 'All containers are already running')
+    return
+  }
+  const total = stopped.length
+  let ok = 0
+  info('Starting containers…', `Restoring ${total} stopped container(s)`)
+  for (const c of stopped) {
+    try {
+      await invoke('start_container', { id: c.id })
+      ok++
+    } catch {
+      /* individual failure — continue with next */
+    }
+  }
+  await fetchContainers(true)
+  if (ok === total) {
+    success('All containers started', `${total} container(s) are now running`)
+  } else {
+    warning('Partial start', `${ok}/${total} container(s) started; check logs for details`)
+  }
+}
+
+function executeItem(item: PaletteItem) {
+  if (item.action) item.action()
+  else if (item.to) router.push(item.to)
+}
+
+function toggleThemeAction() {
+  toggleTheme()
+  success('Theme toggled', isDark.value ? 'Switched to dark mode' : 'Switched to light mode')
+}
 
 onMounted(async () => {
   await Promise.all([fetchContainers(true), fetchImages()])
@@ -23,13 +107,28 @@ function onKeyDown(e: KeyboardEvent) {
   if (e.key === 'Escape') { visible.value = false }
   else if (e.key === 'ArrowDown') { e.preventDefault(); selectedIdx.value = Math.min(selectedIdx.value + 1, results.value.length - 1) }
   else if (e.key === 'ArrowUp') { e.preventDefault(); selectedIdx.value = Math.max(selectedIdx.value - 1, 0) }
-  else if (e.key === 'Enter') { const r = results.value[selectedIdx.value]; if (r) { if (r.to) router.push(r.to); visible.value = false; query.value = '' } }
+  else if (e.key === 'Enter') {
+    const r = results.value[selectedIdx.value]
+    if (r) {
+      if (r.action) { r.action(); visible.value = false; query.value = '' }
+      else if (r.to) { router.push(r.to); visible.value = false; query.value = '' }
+    }
+  }
+}
+
+interface PaletteItem {
+  label: string
+  meta?: string
+  icon: string
+  to?: string
+  action?: () => void
+  group: string
 }
 
 const results = computed(() => {
   const q = query.value.toLowerCase()
   if (!q) return []
-  const items: { label: string; meta?: string; icon: string; to?: string; group: string }[] = []
+  const items: PaletteItem[] = []
   for (const c of containers.value) {
     if (c.name.toLowerCase().includes(q) || c.image.toLowerCase().includes(q))
       items.push({ label: c.name, meta: c.image, icon: 'fa-cube', to: '/containers', group: 'Containers' })
@@ -38,16 +137,21 @@ const results = computed(() => {
     if (img.repository.toLowerCase().includes(q) || img.tag.toLowerCase().includes(q))
       items.push({ label: img.repository, meta: img.tag, icon: 'fa-layer-group', to: '/images', group: 'Images' })
   }
-  // Actions
-  const actions = [
-    { label: 'Pull Image', meta: 'Download from registry', icon: 'fa-cloud-arrow-down', group: 'Actions' },
-    { label: 'System Prune', meta: 'Clean up unused resources', icon: 'fa-broom', to: '/cleanup', group: 'Actions' },
-    { label: 'Open Terminal', meta: 'New host terminal', icon: 'fa-terminal', group: 'Actions' },
-    { label: 'Dashboard', meta: 'Go to Dashboard', icon: 'fa-chart-line', to: '/', group: 'Navigation' },
-    { label: 'Containers', meta: 'View all containers', icon: 'fa-cubes', to: '/containers', group: 'Navigation' },
-    { label: 'Images', meta: 'View all images', icon: 'fa-layer-group', to: '/images', group: 'Navigation' },
-    { label: 'Settings', meta: 'App preferences', icon: 'fa-gear', to: '/settings', group: 'Navigation' },
-    { label: 'Toggle Theme', meta: 'Dark/Light mode', icon: 'fa-moon', group: 'Actions' },
+  // Actions & Navigation
+  const actions: PaletteItem[] = [
+    // ── Docker Actions ──
+    { label: 'Pull Image', meta: 'Download from registry', icon: 'fa-cloud-arrow-down', group: 'Docker Actions', action: pullImageAction },
+    { label: 'Prune All', meta: 'Clean unused containers, images, volumes, networks', icon: 'fa-broom', group: 'Docker Actions', action: pruneAllAction },
+    { label: 'Start All Stopped', meta: 'Restart all exited containers', icon: 'fa-play', group: 'Docker Actions', action: startAllStoppedAction },
+    // ── Navigation ──
+    { label: 'Dashboard', meta: 'Go to Dashboard', icon: 'fa-chart-line', group: 'Navigation', to: '/' },
+    { label: 'Containers', meta: 'View all containers', icon: 'fa-cubes', group: 'Navigation', to: '/containers' },
+    { label: 'Images', meta: 'View all images', icon: 'fa-layer-group', group: 'Navigation', to: '/images' },
+    { label: 'Volumes', meta: 'View all volumes', icon: 'fa-database', group: 'Navigation', to: '/volumes' },
+    { label: 'Networks', meta: 'View all networks', icon: 'fa-network-wired', group: 'Navigation', to: '/networks' },
+    { label: 'Settings', meta: 'App preferences', icon: 'fa-gear', group: 'Navigation', to: '/settings' },
+    // ── App ──
+    { label: 'Toggle Theme', meta: 'Dark/Light mode', icon: 'fa-moon', group: 'App', action: toggleThemeAction },
   ]
   for (const a of actions) {
     if (a.label.toLowerCase().includes(q) || a.meta?.toLowerCase().includes(q))
@@ -77,7 +181,7 @@ watch(visible, (v) => { if (v) { selectedIdx.value = 0; if (!containers.value.le
               {{ r.group }}
             </div>
             <div :class="['palette-item', { active: i === selectedIdx }]"
-              @click="r.to ? router.push(r.to) : null; visible = false; query = ''"
+              @click="executeItem(r); visible = false; query = ''"
               @mouseenter="selectedIdx = i"
               style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:4px;cursor:pointer;font-size:13px;"
               :style="{ background: i === selectedIdx ? 'var(--bg-hover)' : 'transparent' }">

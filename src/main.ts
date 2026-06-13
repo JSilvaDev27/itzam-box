@@ -19,13 +19,26 @@ import '@fortawesome/fontawesome-free/css/all.min.css'
 const routes = [
   { path: '/', name: 'Dashboard', component: () => import('./views/Dashboard.vue') },
   { path: '/containers', name: 'Containers', component: () => import('./views/Containers.vue') },
+  { path: '/containers/:id', name: 'ContainerDetail', component: () => import('./views/ContainerDetail.vue') },
   { path: '/images', name: 'Images', component: () => import('./views/Images.vue') },
+  { path: '/images/:id/layers', name: 'ImageLayers', component: () => import('./views/ImageLayers.vue') },
+  { path: '/build', name: 'ImageBuild', component: () => import('./views/ImageBuild.vue') },
   { path: '/volumes', name: 'Volumes', component: () => import('./views/Volumes.vue') },
   { path: '/networks', name: 'Networks', component: () => import('./views/Networks.vue') },
   { path: '/events', name: 'Events', component: () => import('./views/Events.vue') },
   { path: '/cleanup', name: 'Cleanup', component: () => import('./views/Cleanup.vue') },
   { path: '/settings', name: 'Settings', component: () => import('./views/Settings.vue') },
   { path: '/help', name: 'Help', component: () => import('./views/Help.vue') },
+  { path: '/installer', name: 'Installer', component: () => import('./views/Installer.vue') },
+  { path: '/containers/:id/files', name: 'FileExplorer', component: () => import('./views/FileExplorer.vue'), props: true },
+  { path: '/compose', name: 'ComposeList', component: () => import('./views/compose/ComposeList.vue') },
+  { path: '/compose/:name', name: 'ComposeDetail', component: () => import('./views/compose/ComposeDetail.vue') },
+  { path: '/network-topology', name: 'NetworkTopology', component: () => import('./views/NetworkTopology.vue') },
+  { path: '/registries', name: 'Registries', component: () => import('./views/Registries.vue') },
+  { path: '/run-wizard', name: 'RunWizard', component: () => import('./views/RunWizard.vue') },
+  { path: '/export-import', name: 'ExportImport', component: () => import('./views/ExportImport.vue') },
+  { path: '/templates', name: 'Templates', component: () => import('./views/Templates.vue') },
+  { path: '/image-scanner', name: 'ImageScanner', component: () => import('./views/ImageScanner.vue') },
 ]
 
 const router = createRouter({

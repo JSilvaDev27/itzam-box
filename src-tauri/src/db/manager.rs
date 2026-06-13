@@ -17,9 +17,11 @@ pub fn setup_database(db_path: PathBuf) -> Result<Connection, String> {
     conn.pragma_update(None, "journal_mode", "WAL")
         .map_err(|e| format!("Failed to enable WAL: {}", e))?;
 
-    // Run initial migration
+    // Run migrations
     conn.execute_batch(include_str!("../../migrations/001_initial.sql"))
-        .map_err(|e| format!("Migration failed: {}", e))?;
+        .map_err(|e| format!("Migration 001 failed: {}", e))?;
+    conn.execute_batch(include_str!("../../migrations/002_templates.sql"))
+        .map_err(|e| format!("Migration 002 failed: {}", e))?;
 
     // Insert default configurations if not present
     let defaults = [
@@ -135,6 +137,7 @@ mod tests {
         assert!(tables.contains(&"system_config".to_string()));
         assert!(tables.contains(&"pinned_containers".to_string()));
         assert!(tables.contains(&"host_metrics_history".to_string()));
+        assert!(tables.contains(&"container_templates".to_string()));
     }
 
     #[test]

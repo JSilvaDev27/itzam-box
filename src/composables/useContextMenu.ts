@@ -66,16 +66,51 @@ export function containerContextMenu(container: { id: string; name: string; imag
 }
 
 // Build menu items for an image row
-export function imageContextMenu(image: { id: string; repository: string; tag: string }) {
+export function imageContextMenu(
+  image: { id: string; repository: string; tag: string },
+  callbacks?: { onRun?: () => void; onPull?: () => void; onRemove?: () => void; onInspect?: () => void; onTag?: () => void }
+) {
   return [
     { id: 'copy-repo', label: 'Copy Repository', icon: 'fa-copy', action: () => copyToClipboard(image.repository, 'Repository copied!') },
     { id: 'copy-tag', label: 'Copy Tag', icon: 'fa-tag', action: () => copyToClipboard(image.tag, 'Tag copied!') },
     { id: 'copy-id', label: 'Copy Image ID', icon: 'fa-copy', action: () => copyToClipboard(image.id, 'Image ID copied!') },
     { id: 'div1', label: '', divider: true },
-    { id: 'run', label: 'Run Container', icon: 'fa-play' },
-    { id: 'pull', label: 'Pull Latest', icon: 'fa-cloud-arrow-down' },
+    { id: 'run', label: 'Run Container', icon: 'fa-play', action: callbacks?.onRun },
+    { id: 'pull', label: 'Pull Latest', icon: 'fa-cloud-arrow-down', action: callbacks?.onPull },
+    { id: 'tag', label: 'Tag Image', icon: 'fa-tag', action: callbacks?.onTag },
     { id: 'div2', label: '', divider: true },
-    { id: 'remove', label: 'Remove', icon: 'fa-trash-can', danger: true },
+    { id: 'inspect', label: 'Inspect', icon: 'fa-magnifying-glass', action: callbacks?.onInspect },
+    { id: 'div3', label: '', divider: true },
+    { id: 'remove', label: 'Remove', icon: 'fa-trash-can', danger: true, action: callbacks?.onRemove },
+  ]
+}
+
+// Build menu items for a volume row
+export function volumeContextMenu(
+  volume: { name: string; driver: string; mountpoint: string },
+  callbacks?: { onInspect?: () => void; onRemove?: () => void }
+) {
+  return [
+    { id: 'copy-name', label: 'Copy Name', icon: 'fa-copy', action: () => copyToClipboard(volume.name, 'Volume name copied!') },
+    { id: 'div1', label: '', divider: true },
+    { id: 'inspect', label: 'Inspect', icon: 'fa-magnifying-glass', action: callbacks?.onInspect },
+    { id: 'div2', label: '', divider: true },
+    { id: 'remove', label: 'Remove', icon: 'fa-trash-can', danger: true, action: callbacks?.onRemove },
+  ]
+}
+
+// Build menu items for a network row
+export function networkContextMenu(
+  network: { id: string; name: string; driver: string; scope: string },
+  callbacks?: { onInspect?: () => void; onRemove?: () => void }
+) {
+  return [
+    { id: 'copy-id', label: 'Copy Network ID', icon: 'fa-copy', action: () => copyToClipboard(network.id, 'Network ID copied!') },
+    { id: 'copy-name', label: 'Copy Name', icon: 'fa-copy', action: () => copyToClipboard(network.name, 'Network name copied!') },
+    { id: 'div1', label: '', divider: true },
+    { id: 'inspect', label: 'Inspect', icon: 'fa-magnifying-glass', action: callbacks?.onInspect },
+    { id: 'div2', label: '', divider: true },
+    { id: 'remove', label: 'Remove', icon: 'fa-trash-can', danger: true, action: callbacks?.onRemove },
   ]
 }
 

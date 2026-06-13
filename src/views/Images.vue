@@ -2,14 +2,19 @@
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { invoke } from '@tauri-apps/api/core'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, imageContextMenu } from '../composables/useContextMenu'
+import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
+const router = useRouter()
 const { images, fetchImages, pullImage, removeImage } = useDocker()
 const { show } = useContextMenu()
+const { info, success, error: notifyError } = useNotifications()
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showPullModal = ref(false)
@@ -37,6 +42,48 @@ async function handlePull() {
     await loadData()
   } catch (e: any) { error.value = e.toString() }
   pulling.value = false
+}
+
+function getImageCallbacks(img: { id: string; repository: string; tag: string; size_bytes: number }) {
+  return {
+    onRun: () => {
+      info('Run Container', `Open Containers view to create a container from ${img.repository}:${img.tag}.`)
+    },
+    onPull: async () => {
+      try {
+        pullImageName.value = img.repository + (img.tag && img.tag !== 'latest' ? `:${img.tag}` : '')
+        showPullModal.value = true
+      } catch (e: any) { /* handled by modal */ }
+    },
+    onRemove: async () => {
+      try {
+        await removeImage(img.id, true)
+        success('Image removed', `${img.repository}:${img.tag} removed successfully.`)
+        await loadData()
+      } catch (e: any) {
+        notifyError('Failed to remove image', e.toString())
+      }
+    },
+    onInspect: () => {
+      info(
+        `Image: ${img.repository}:${img.tag}`,
+        `ID: ${img.id}\nSize: ${formatBytes(img.size_bytes)}\nRepository: ${img.repository}\nTag: ${img.tag}`
+      )
+    },
+    onTag: async () => {
+      try {
+        await invoke('tag_image', { id: img.id, repo: img.repository, tag: img.tag })
+        success('Image tagged', `${img.repository}:${img.tag} tagged.`)
+        await loadData()
+      } catch (e: any) {
+        notifyError('Failed to tag image', e.toString())
+      }
+    },
+  }
+}
+
+function navigateToLayers(img: { id: string }) {
+  router.push(`/images/${img.id}/layers`)
 }
 
 function formatBytes(b: number): string {
@@ -91,14 +138,17 @@ function formatBytes(b: number): string {
       <div class="section-header">
         <span class="section-title">Local Images ({{ images.length }})</span>
       </div>
-      <div v-for="img in images" :key="img.id" class="data-row" @contextmenu="show($event, imageContextMenu(img))">
+      <div v-for="img in images" :key="img.id" class="data-row" @click="navigateToLayers(img)" @contextmenu="show($event, imageContextMenu(img, getImageCallbacks(img)))">
         <div class="row-info">
           <div class="row-name">{{ img.repository }}</div>
           <div class="row-meta">{{ img.tag }} · {{ formatBytes(img.size_bytes) }}</div>
         </div>
         <span class="port-tag">{{ img.tag }}</span>
         <div class="row-actions">
-          <button class="action-btn" @click="removeImage(img.id, true)" title="Remove">
+          <button class="action-btn" @click.stop="navigateToLayers(img)" title="View layers">
+            <i class="fa-solid fa-layer-group"></i>
+          </button>
+          <button class="action-btn" @click.stop="removeImage(img.id, true)" title="Remove">
             <i class="fa-solid fa-trash-can"></i>
           </button>
         </div>

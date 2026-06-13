@@ -2,12 +2,14 @@
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
 import { onMounted, computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
+const router = useRouter()
 const { containers, fetchContainers, startContainer, stopContainer, restartContainer, pauseContainer, unpauseContainer, removeContainer } = useDocker()
 const { show } = useContextMenu()
 const loading = ref(false)
@@ -44,6 +46,10 @@ const composeGroups = computed(() => {
   }
   return { groups, standalone }
 })
+
+function goToDetail(id: string) {
+  router.push('/containers/' + id)
+}
 
 async function handleAction(id: string, action: string) {
   try {
@@ -109,7 +115,7 @@ async function handleAction(id: string, action: string) {
         <div class="compose-group-header">
           <div class="compose-group-name"><i class="fa-solid fa-folder-tree"></i> {{ project }} <span class="tag compose">compose</span></div>
         </div>
-        <div v-for="c in groupContainers" :key="c.id" class="data-row" @contextmenu="show($event, containerContextMenu(c))">
+        <div v-for="c in groupContainers" :key="c.id" class="data-row" @click="goToDetail(c.id)" @contextmenu="show($event, containerContextMenu(c))">
           <span :class="['status-dot', c.state === 'running' ? 'status-dot--running' : c.state === 'paused' ? 'status-dot--paused' : 'status-dot--stopped']"></span>
           <div class="row-info"><div class="row-name">{{ c.name }}</div><div class="row-meta">{{ c.image }}</div></div>
           <span :class="['tag', c.state === 'running' ? 'tag running' : c.state === 'paused' ? 'tag paused' : 'tag stopped']">{{ c.state }}</span>
@@ -130,7 +136,7 @@ async function handleAction(id: string, action: string) {
           <i class="fa-solid fa-cubes" style="font-size:48px;margin-bottom:16px;opacity:0.3"></i>
           <p style="font-size:14px">No containers found</p>
         </div>
-        <div v-for="c in composeGroups.standalone" :key="c.id" class="data-row" @contextmenu="show($event, containerContextMenu(c))">
+        <div v-for="c in composeGroups.standalone" :key="c.id" class="data-row" @click="goToDetail(c.id)" @contextmenu="show($event, containerContextMenu(c))">
           <span :class="['status-dot', c.state === 'running' ? 'status-dot--running' : c.state === 'paused' ? 'status-dot--paused' : 'status-dot--stopped']"></span>
           <div class="row-info"><div class="row-name">{{ c.name }}</div><div class="row-meta">{{ c.image }}</div></div>
           <span :class="['tag', c.state === 'running' ? 'tag running' : c.state === 'paused' ? 'tag paused' : 'tag stopped']">{{ c.state }}</span>

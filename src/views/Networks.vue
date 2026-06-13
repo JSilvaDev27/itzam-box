@@ -4,11 +4,15 @@
 import { onMounted, ref, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import type { NetworkInfo } from '../composables/useDocker'
+import { useContextMenu, networkContextMenu } from '../composables/useContextMenu'
+import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
 const networks = ref<NetworkInfo[]>([])
+const { show } = useContextMenu()
+const { info, success, error: notifyError } = useNotifications()
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showCreate = ref(false)
@@ -38,6 +42,25 @@ async function createNetwork() {
 async function removeNetwork(id: string) {
   if (!confirm('Delete this network?')) return
   try { await invoke('remove_network', { id }); await loadData() } catch(e: any) { error.value = e.toString() }
+}
+
+function getNetworkCallbacks(n: NetworkInfo) {
+  return {
+    onInspect: () => {
+      info(
+        `Network: ${n.name}`,
+        `ID: ${n.id}\nDriver: ${n.driver}\nScope: ${n.scope}`
+      )
+    },
+    onRemove: async () => {
+      try {
+        await removeNetwork(n.id)
+        success('Network removed', `${n.name} removed successfully.`)
+      } catch (e: any) {
+        notifyError('Failed to remove network', e.toString())
+      }
+    },
+  }
 }
 </script>
 
@@ -80,7 +103,7 @@ async function removeNetwork(id: string) {
 
     <div v-else class="section">
       <div class="section-header"><span class="section-title">Networks ({{ networks.length }})</span></div>
-      <div v-for="n in networks" :key="n.id" class="data-row">
+      <div v-for="n in networks" :key="n.id" class="data-row" @contextmenu="show($event, networkContextMenu(n, getNetworkCallbacks(n)))">
         <div class="row-info"><div class="row-name">{{ n.name }}</div><div class="row-meta">Driver: {{ n.driver }} · Scope: {{ n.scope }}</div></div>
         <span class="port-tag">{{ n.driver }}</span>
         <div class="row-actions">

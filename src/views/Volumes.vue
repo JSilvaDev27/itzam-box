@@ -4,11 +4,15 @@
 import { onMounted, ref, computed } from 'vue'
 import { useDocker } from '../composables/useDocker'
 import { invoke } from '@tauri-apps/api/core'
+import { useContextMenu, volumeContextMenu } from '../composables/useContextMenu'
+import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
 const { volumes, fetchVolumes } = useDocker()
+const { show } = useContextMenu()
+const { info, success, error: notifyError } = useNotifications()
 const loading = ref(false)
 const error = ref<string | null>(null)
 const showCreate = ref(false)
@@ -41,6 +45,25 @@ async function removeVolume(name: string) {
     await invoke('remove_volume', { name, force: true })
     await loadData()
   } catch (e: any) { error.value = e.toString() }
+}
+
+function getVolumeCallbacks(v: { name: string; driver: string; mountpoint: string }) {
+  return {
+    onInspect: () => {
+      info(
+        `Volume: ${v.name}`,
+        `Driver: ${v.driver}\nMountpoint: ${v.mountpoint}`
+      )
+    },
+    onRemove: async () => {
+      try {
+        await removeVolume(v.name)
+        success('Volume removed', `${v.name} removed successfully.`)
+      } catch (e: any) {
+        notifyError('Failed to remove volume', e.toString())
+      }
+    },
+  }
 }
 </script>
 
@@ -86,7 +109,7 @@ async function removeVolume(name: string) {
 
     <div v-else class="section">
       <div class="section-header"><span class="section-title">Volumes ({{ volumes.length }})</span></div>
-      <div v-for="v in volumes" :key="v.name" class="data-row">
+      <div v-for="v in volumes" :key="v.name" class="data-row" @contextmenu="show($event, volumeContextMenu(v, getVolumeCallbacks(v)))">
         <div class="row-info">
           <div class="row-name">{{ v.name }}</div>
           <div class="row-meta">Driver: {{ v.driver }} · {{ v.mountpoint }}</div>

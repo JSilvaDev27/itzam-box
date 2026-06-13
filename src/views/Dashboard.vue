@@ -2,11 +2,16 @@
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from 'vue'
+import { invoke } from '@tauri-apps/api/core'
+import type { HostMetrics } from '../composables/useDocker'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
+import { useTimeSeries } from '../composables/useTimeSeries'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
+import CpuChart from '../components/charts/CpuChart.vue'
+import RamChart from '../components/charts/RamChart.vue'
 
 const { containers, images, volumes, hostMetrics, loading, error, refreshAll,
         startContainer, stopContainer, restartContainer, removeContainer } = useDocker()
@@ -14,16 +19,33 @@ const { show } = useContextMenu()
 
 const firstLoadDone = ref(false)
 
+const { cpuHistory, ramHistory, push: pushMetrics, clear: clearMetrics } = useTimeSeries()
+const hasChartData = computed(() => cpuHistory.value.length > 0)
+
 let interval: number | undefined
+let metricsInterval: number | undefined
 
 onMounted(async () => {
   await refreshAll()
   firstLoadDone.value = true
   interval = window.setInterval(() => refreshAll(), 5000)
+  // Separate 2s interval for host-metrics polling → time-series charts
+  metricsInterval = window.setInterval(async () => {
+    try {
+      const m = await invoke<HostMetrics>('get_host_metrics')
+      hostMetrics.value = m
+      const ramPct = (m.memory_used_bytes / m.memory_total_bytes) * 100
+      pushMetrics(m.cpu_usage_percent, ramPct)
+    } catch {
+      // metrics polling is non-critical — swallow silently
+    }
+  }, 2000)
 })
 
 onUnmounted(() => {
   if (interval) clearInterval(interval)
+  if (metricsInterval) clearInterval(metricsInterval)
+  clearMetrics()
 })
 
 const runningContainers = computed(() => containers.value.filter(c => c.state === 'running'))
@@ -113,6 +135,16 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
+  <!-- Time-Series Charts (CPU + RAM) — show skeleton until first data point arrives -->
+  <SkeletonLoader v-if="firstLoadDone && !error && !hasChartData" variant="chart" />
+  <div
+    v-show="hasChartData && firstLoadDone && !error"
+    class="charts-grid"
+  >
+    <CpuChart :data="cpuHistory" :cores="hostMetrics?.cpu_cores ?? 0" />
+    <RamChart :data="ramHistory" :totalGb="(hostMetrics?.memory_total_bytes ?? 0) / 1e9" />
+  </div>
+
   <!-- Host Info — keep visible during refresh, guard inner expressions -->
   <div v-show="hostMetrics && firstLoadDone && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <template v-if="hostMetrics">
@@ -172,3 +204,12 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     @secondary="$router.push('/images')"
   />
 </template>
+
+<style scoped>
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+</style>

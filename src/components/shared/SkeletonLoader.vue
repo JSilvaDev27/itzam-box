@@ -3,7 +3,7 @@
      A.6.1 — Loading State: Skeleton screens with shimmer animation -->
 <script setup lang="ts">
 defineProps<{
-  variant?: 'card' | 'table-row' | 'text' | 'header' | 'metric-grid'
+  variant?: 'card' | 'table-row' | 'text' | 'header' | 'metric-grid' | 'chart'
   count?: number
   rows?: number
   lines?: number
@@ -58,6 +58,23 @@ defineProps<{
   <div v-else-if="variant === 'header'" style="padding:4px 0 20px">
     <div class="skeleton skeleton-text-lg" style="width:200px;margin-bottom:8px"></div>
     <div class="skeleton skeleton-text-sm" style="width:320px"></div>
+  </div>
+
+  <!-- Chart skeleton (A.6.1 — chart loading placeholder) -->
+  <div v-else-if="variant === 'chart'" style="background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:var(--radius-lg);overflow:hidden;height:196px">
+    <div style="padding:12px 16px 0;display:flex;justify-content:space-between">
+      <div class="skeleton skeleton-text-sm" style="width:80px"></div>
+      <div class="skeleton skeleton-text-xs" style="width:60px"></div>
+    </div>
+    <div style="padding:20px 16px;display:flex;flex-direction:column;gap:8px">
+      <div class="skeleton" style="height:60px;border-radius:6px;width:100%"></div>
+      <div style="display:flex;justify-content:space-between;padding:0 4px">
+        <div class="skeleton skeleton-text-xs" style="width:30px"></div>
+        <div class="skeleton skeleton-text-xs" style="width:30px"></div>
+        <div class="skeleton skeleton-text-xs" style="width:30px"></div>
+        <div class="skeleton skeleton-text-xs" style="width:30px"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Default: full page skeleton -->

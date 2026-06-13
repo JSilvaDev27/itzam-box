@@ -42,10 +42,17 @@ const navItems = [
   { to: '/', icon: 'fa-chart-line', label: 'Dashboard' },
   { to: '/containers', icon: 'fa-cubes', label: 'Containers' },
   { to: '/images', icon: 'fa-layer-group', label: 'Images' },
+  { to: '/build', icon: 'fa-hammer', label: 'Build' },
   { to: '/volumes', icon: 'fa-database', label: 'Volumes' },
   { to: '/networks', icon: 'fa-network-wired', label: 'Networks' },
   { to: '/events', icon: 'fa-clock-rotate-left', label: 'Events' },
   { to: '/cleanup', icon: 'fa-broom', label: 'Cleanup' },
+  { to: '/compose', icon: 'fa-layer-group', label: 'Compose' },
+  { to: '/registries', icon: 'fa-server', label: 'Registries' },
+  { to: '/run-wizard', icon: 'fa-wand-magic-sparkles', label: 'Run Wizard' },
+  { to: '/templates', icon: 'fa-copy', label: 'Templates' },
+  { to: '/installer', icon: 'fa-docker', label: 'Docker Setup' },
+  { to: '/export-import', icon: 'fa-file-export', label: 'Export/Import' },
 ]
 </script>
 

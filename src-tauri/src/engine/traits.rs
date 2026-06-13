@@ -43,6 +43,9 @@ pub trait ContainerEngine: Send + Sync {
         restart_policy: Option<&str>,
         command: Option<Vec<String>>,
         detach: bool,
+        cpu_limit: Option<f64>,
+        memory_limit: Option<String>,
+        privileged: bool,
     ) -> Result<String, String>;
 
     // ─── File Explorer ───
