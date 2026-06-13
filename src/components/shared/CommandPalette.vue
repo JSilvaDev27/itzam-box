@@ -1,7 +1,7 @@
 <!-- ItzamBox — Command Palette (Ctrl+K)
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDocker } from '../../composables/useDocker'
 
@@ -57,7 +57,6 @@ const results = computed(() => {
 })
 
 watch(visible, (v) => { if (v) { selectedIdx.value = 0; if (!containers.value.length) fetchContainers(true) } })
-import { watch } from 'vue'
 </script>
 
 <template>

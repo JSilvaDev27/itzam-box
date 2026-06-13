@@ -48,38 +48,7 @@
   },
   "plugins": {
     "shell": {
-      "open": true,
-      "scope": [
-        {
-          "name": "docker",
-          "cmd": "docker",
-          "args": true
-        },
-        {
-          "name": "trivy",
-          "cmd": "trivy",
-          "args": true
-        },
-        {
-          "name": "bash",
-          "cmd": "/bin/bash",
-          "args": true
-        },
-        {
-          "name": "sh",
-          "cmd": "/bin/sh",
-          "args": true
-        }
-      ]
-    },
-    "notification": {
-      "all": true
-    },
-    "dialog": {
-      "all": true
-    },
-    "fs": {
-      "scope": ["$APPDATA/**", "$HOME/**"]
+      "open": true
     }
   }
 }

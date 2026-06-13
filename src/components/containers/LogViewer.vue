@@ -1,7 +1,7 @@
 <!-- ItzamBox — Log Viewer Component
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
 const props = defineProps<{ containerId: string; containerName: string }>()
@@ -9,12 +9,21 @@ const props = defineProps<{ containerId: string; containerName: string }>()
 const logs = ref('')
 const tail = ref(500)
 const timestamps = ref(true)
-const follow = ref(false)
-const filter = ref('')
 const showStdout = ref(true)
 const showStderr = ref(true)
+const filter = ref('')
 const loading = ref(false)
 const logContainer = ref<HTMLDivElement>()
+
+const coloredLogs = computed(() => {
+  if (!logs.value) return '<span style="color:#9ca3af">No logs</span>'
+  return logs.value
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/\[error\]/gi, '<span style="color:#ef4444">[error]</span>')
+    .replace(/\[warn\]/gi, '<span style="color:#f59e0b">[warn]</span>')
+    .replace(/\[info\]/gi, '<span style="color:#3b82f6">[info]</span>')
+    .replace(/\[debug\]/gi, '<span style="color:#9ca3af">[debug]</span>')
+})
 
 async function fetchLogs() {
   loading.value = true
@@ -63,7 +72,7 @@ function copyLogs() {
     </div>
     <div ref="logContainer"
       style="background:#000;border-radius:var(--radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;line-height:1.6;color:#e0e0e0;max-height:350px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"
-      v-html="logs.replace(/\[error\]/gi,'<span style=color:#ef4444>[error]</span>').replace(/\[warn\]/gi,'<span style=color:#f59e0b>[warn]</span>').replace(/\[info\]/gi,'<span style=color:#3b82f6>[info]</span>').replace(/\[debug\]/gi,'<span style=color:#9ca3af>[debug]</span>') || 'No logs'">
+      v-html="coloredLogs">
     </div>
   </div>
 </template>

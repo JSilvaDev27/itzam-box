@@ -171,6 +171,7 @@ onUnmounted(() => {
       </span>
       <button style="marginLeft:auto;width:28px;height:28px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;borderRadius:4px;marginRight:4px"
         @click="addContainerTerminal" title="New container terminal">+</button>
+      <button style="width:28px;height:28px;border:none;background:transparent;color:var(--text-muted);cursor:pointer;borderRadius:4px"
         @click="closeTerminal" title="Close terminal">
         <i class="fa-solid fa-chevron-down"></i>
       </button>
