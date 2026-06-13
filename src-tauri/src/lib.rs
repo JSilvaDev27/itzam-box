@@ -53,10 +53,35 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .manage(state)
         .invoke_handler(tauri::generate_handler![
+            // Containers
             commands::containers::list_containers,
+            commands::containers::inspect_container,
+            commands::containers::start_container,
+            commands::containers::stop_container,
+            commands::containers::restart_container,
+            commands::containers::pause_container,
+            commands::containers::unpause_container,
+            commands::containers::kill_container,
+            commands::containers::rename_container,
+            commands::containers::remove_container,
+            // Images
             commands::images::list_images,
+            commands::images::pull_image,
+            commands::images::remove_image,
+            commands::images::tag_image,
+            commands::images::inspect_image,
+            // Volumes
+            commands::volumes::list_volumes,
+            commands::volumes::create_volume,
+            commands::volumes::remove_volume,
+            // Networks
+            commands::networks::list_networks,
+            commands::networks::create_network,
+            commands::networks::remove_network,
+            // Settings
             commands::settings::get_config,
             commands::settings::set_config,
+            // Host Metrics
             commands::host_metrics::get_host_metrics,
         ])
         .run(tauri::generate_context!())

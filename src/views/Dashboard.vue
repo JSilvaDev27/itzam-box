@@ -1,6 +1,41 @@
-<!-- ItzamBox — Dashboard View (MVP placeholder) -->
-<!-- Copyright (C) 2026 SodigTech — GPL-3.0 -->
+<!-- ItzamBox — Dashboard View
+     Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
+import { onMounted, onUnmounted, computed } from 'vue'
+import { useDocker } from '../composables/useDocker'
+
+const { containers, images, volumes, hostMetrics, loading, error, refreshAll,
+        startContainer, stopContainer, restartContainer, removeContainer } = useDocker()
+
+let interval: number | undefined
+
+onMounted(async () => {
+  await refreshAll()
+  interval = window.setInterval(() => refreshAll(), 5000) // Refresh every 5s
+})
+
+onUnmounted(() => {
+  if (interval) clearInterval(interval)
+})
+
+const runningContainers = computed(() => containers.value.filter(c => c.state === 'running'))
+const stoppedContainers = computed(() => containers.value.filter(c => c.state === 'exited' || c.state === 'stopped'))
+const memoryPercent = computed(() => {
+  if (!hostMetrics.value) return 0
+  return (hostMetrics.value.memory_used_bytes / hostMetrics.value.memory_total_bytes * 100).toFixed(0)
+})
+const uptimeDays = computed(() => {
+  if (!hostMetrics.value) return '--'
+  const days = Math.floor(hostMetrics.value.uptime_seconds / 86400)
+  const hours = Math.floor((hostMetrics.value.uptime_seconds % 86400) / 3600)
+  return `${days}d ${hours}h`
+})
+
+function formatBytes(bytes: number): string {
+  if (bytes > 1e9) return (bytes / 1e9).toFixed(1) + ' GB'
+  if (bytes > 1e6) return Math.round(bytes / 1e6) + ' MB'
+  return Math.round(bytes / 1e3) + ' KB'
+}
 </script>
 
 <template>
@@ -12,46 +47,104 @@
   <div style="display:flex;align-items:center;justify-content:space-between;">
     <h1 class="text-h1">Dashboard</h1>
     <div style="display:flex;gap:8px;">
-      <button class="btn btn-secondary"><i class="fa-solid fa-rotate"></i> Refresh</button>
-      <button class="btn btn-primary"><i class="fa-solid fa-plus"></i> New Container</button>
+      <button class="btn btn-secondary" @click="refreshAll" :disabled="loading">
+        <i class="fa-solid fa-rotate"></i> {{ loading ? 'Loading...' : 'Refresh' }}
+      </button>
     </div>
   </div>
 
-  <div class="metrics-grid">
+  <!-- Error -->
+  <div v-if="error" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:var(--radius-md);padding:16px;color:var(--accent-red);font-size:13px">
+    <i class="fa-solid fa-circle-exclamation"></i> {{ error }}
+    <div style="margin-top:8px;font-size:11px;color:var(--text-muted)">
+      Is Docker running? Try: <code style="background:var(--bg-tertiary);padding:2px 6px;border-radius:3px;font-family:var(--font-mono)">sudo systemctl start docker</code>
+    </div>
+  </div>
+
+  <!-- Metric Cards -->
+  <div v-if="!error" class="metrics-grid">
     <div class="metric-card">
       <div class="metric-icon green"><i class="fa-solid fa-cubes"></i></div>
       <div class="metric-label">Active Containers</div>
-      <div class="metric-value" style="color:var(--accent-green)">--</div>
-      <div class="metric-delta up"><i class="fa-solid fa-arrow-up"></i> Loading...</div>
+      <div class="metric-value" style="color:var(--accent-green)">{{ runningContainers.length }}</div>
+      <div class="metric-delta">{{ containers.length }} total</div>
     </div>
     <div class="metric-card">
       <div class="metric-icon cyan"><i class="fa-solid fa-layer-group"></i></div>
       <div class="metric-label">Local Images</div>
-      <div class="metric-value">--</div>
-      <div class="metric-delta up">Loading...</div>
+      <div class="metric-value">{{ images.length }}</div>
+      <div class="metric-delta">{{ volumes.length }} volumes</div>
     </div>
     <div class="metric-card">
-      <div class="metric-icon purple"><i class="fa-solid fa-database"></i></div>
-      <div class="metric-label">Volumes</div>
-      <div class="metric-value">--</div>
-      <div class="metric-delta up">Loading...</div>
+      <div class="metric-icon purple"><i class="fa-solid fa-microchip"></i></div>
+      <div class="metric-label">CPU Usage</div>
+      <div class="metric-value" :style="{ color: (hostMetrics?.cpu_usage_percent ?? 0) > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }">
+        {{ hostMetrics?.cpu_usage_percent.toFixed(1) ?? '--' }}%
+      </div>
+      <div class="metric-delta">{{ hostMetrics?.cpu_cores ?? '--' }} cores</div>
     </div>
     <div class="metric-card">
-      <div class="metric-icon amber"><i class="fa-solid fa-hard-drive"></i></div>
-      <div class="metric-label">Disk Used</div>
-      <div class="metric-value">-- GB</div>
-      <div class="metric-delta">Loading...</div>
+      <div class="metric-icon amber"><i class="fa-solid fa-memory"></i></div>
+      <div class="metric-label">Memory</div>
+      <div class="metric-value">{{ memoryPercent }}%</div>
+      <div class="metric-delta" v-if="hostMetrics">
+        {{ formatBytes(hostMetrics.memory_used_bytes) }} / {{ formatBytes(hostMetrics.memory_total_bytes) }}
+      </div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-header">
-      <span class="section-title">Getting Started</span>
+  <!-- Host Info -->
+  <div v-if="hostMetrics && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="section">
+      <div class="section-header"><span class="section-title"><i class="fa-solid fa-server" style="color:var(--accent-cyan);margin-right:8px"></i> Host</span></div>
+      <div style="padding:16px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Hostname</span><span style="font-family:var(--font-mono)">{{ hostMetrics.hostname }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">OS</span><span>{{ hostMetrics.os_name }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Kernel</span><span style="font-family:var(--font-mono)">{{ hostMetrics.kernel_version }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Uptime</span><span style="font-family:var(--font-mono)">{{ uptimeDays }}</span></div>
+      </div>
     </div>
-    <div style="padding:40px;text-align:center;color:var(--text-muted)">
-      <i class="fa-solid fa-rocket" style="font-size:48px;margin-bottom:16px;opacity:0.3"></i>
-      <p style="font-size:14px;margin-bottom:8px">ItzamBox v1.0.0 — MVP Phase 1</p>
-      <p style="font-size:12px">Docker Engine connection pending. Backend integration in progress.</p>
+    <div class="section">
+      <div class="section-header"><span class="section-title"><i class="fa-solid fa-docker" style="color:var(--accent-cyan);margin-right:8px"></i> Docker</span></div>
+      <div style="padding:16px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Containers</span><span>{{ runningContainers.length }} running, {{ stoppedContainers.length }} stopped</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Images</span><span>{{ images.length }}</span></div>
+        <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Volumes</span><span>{{ volumes.length }}</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Containers -->
+  <div v-if="containers.length > 0 && !error" class="section">
+    <div class="section-header">
+      <span class="section-title">Containers</span>
+      <div class="table-toolbar">
+        <span style="font-size:12px;color:var(--text-muted)">{{ containers.length }} total</span>
+      </div>
+    </div>
+    <div v-for="c in containers.slice(0, 10)" :key="c.id" class="data-row">
+      <span :class="['status-dot', c.state === 'running' ? 'status-dot--running' : c.state === 'paused' ? 'status-dot--paused' : 'status-dot--stopped']"></span>
+      <div class="row-info">
+        <div class="row-name">{{ c.name }}</div>
+        <div class="row-meta">{{ c.image }} · {{ c.status }}</div>
+      </div>
+      <span :class="['tag', c.state === 'running' ? 'tag running' : c.state === 'paused' ? 'tag paused' : 'tag stopped']">{{ c.state }}</span>
+      <div class="row-actions">
+        <button v-if="c.state === 'stopped' || c.state === 'exited'" class="action-btn" @click.stop="startContainer(c.id)" title="Start"><i class="fa-solid fa-play"></i></button>
+        <button v-if="c.state === 'running'" class="action-btn" @click.stop="stopContainer(c.id)" title="Stop"><i class="fa-solid fa-stop"></i></button>
+        <button v-if="c.state === 'running'" class="action-btn" @click.stop="restartContainer(c.id)" title="Restart"><i class="fa-solid fa-rotate-right"></i></button>
+        <button v-if="c.state !== 'running'" class="action-btn" @click.stop="removeContainer(c.id, true)" title="Remove"><i class="fa-solid fa-trash-can"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Empty state -->
+  <div v-if="containers.length === 0 && !error && !loading" class="section">
+    <div style="padding:60px;text-align:center;color:var(--text-muted)">
+      <i class="fa-solid fa-docker" style="font-size:48px;margin-bottom:16px;opacity:0.3"></i>
+      <p style="font-size:14px;margin-bottom:4px">No containers running</p>
+      <p style="font-size:12px;margin-bottom:16px">Pull an image and create your first container:</p>
+      <code style="background:var(--bg-tertiary);padding:4px 12px;border-radius:4px;font-family:var(--font-mono);font-size:12px">docker run -d --name my-app nginx:latest</code>
     </div>
   </div>
 </template>
