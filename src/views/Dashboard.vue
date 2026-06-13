@@ -113,8 +113,9 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     </div>
   </div>
 
-  <!-- Host Info — keep visible during refresh -->
+  <!-- Host Info — keep visible during refresh, guard inner expressions -->
   <div v-show="hostMetrics && firstLoadDone && !error" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" :style="{ opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s' }">
+    <template v-if="hostMetrics">
     <div class="section">
       <div class="section-header"><span class="section-title"><i class="fa-solid fa-server" style="color:var(--accent-cyan);margin-right:8px"></i> Host</span></div>
       <div style="padding:16px;font-size:13px;display:flex;flex-direction:column;gap:6px;">
@@ -132,6 +133,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">Volumes</span><span>{{ volumes.length }}</span></div>
       </div>
     </div>
+    </template>
   </div>
 
   <!-- Recent Containers — keep visible during refresh -->
