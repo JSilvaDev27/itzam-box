@@ -114,6 +114,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
     <i class="fa-solid fa-chevron-right"></i> <span class="current">Dashboard</span>
@@ -186,9 +187,9 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   </div>
 
   <!-- Time-Series Charts (CPU + RAM) — show skeleton until first data point arrives -->
-  <SkeletonLoader v-if="firstLoadDone && !error && !hasChartData" variant="chart" />
+  <SkeletonLoader v-if="(!hasChartData || loading) && !error" variant="chart" />
   <div
-    v-show="hasChartData && firstLoadDone && !error"
+    v-show="hasChartData && !error"
     class="charts-grid"
   >
     <CpuChart :data="cpuHistory" :cores="hostMetrics?.cpu_cores ?? 0" />
@@ -253,6 +254,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     @action="$router.push('/images')"
     @secondary="$router.push('/images')"
   />
+  </div>
 </template>
 
 <style scoped>

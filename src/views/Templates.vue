@@ -238,6 +238,7 @@ async function handleSeed() {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
     <i class="fa-solid fa-chevron-right"></i> <span class="current">Templates</span>
@@ -497,6 +498,7 @@ async function handleSeed() {
         </button>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

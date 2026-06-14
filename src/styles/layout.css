@@ -145,6 +145,82 @@
 .breadcrumb i { font-size: 10px; }
 .breadcrumb .current { color: var(--text-main); font-weight: 500; }
 
+/* ═══════════════════════════════════════════
+   RESPONSIVE BREAKPOINTS (BUG-02)
+   ═══════════════════════════════════════════ */
+
+/* ─── Tablet: ≤ 900px — Sidebar collapses ─── */
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    top: var(--header-height);
+    left: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform var(--transition-normal);
+  }
+  .sidebar.collapsed {
+    transform: translateX(0);
+    width: var(--sidebar-width);
+  }
+  .content {
+    margin-left: 0;
+    padding: 16px;
+  }
+  .search-bar {
+    width: 160px;
+  }
+}
+
+/* ─── Phone: ≤ 600px — Grids 1fr, breadcrumbs truncate ─── */
+@media (max-width: 600px) {
+  .sidebar {
+    width: 100%;
+    max-width: 280px;
+  }
+  .sidebar.collapsed {
+    width: 100%;
+    max-width: 280px;
+  }
+  .content {
+    padding: 12px;
+    gap: 12px;
+  }
+  .search-bar {
+    width: 120px;
+  }
+  .breadcrumb {
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+  .breadcrumb .current {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 120px;
+  }
+  .breadcrumb i {
+    flex-shrink: 0;
+  }
+  /* Metric grids → single column */
+  :where(.metrics-grid, .backup-summary-grid, .inspect-grid, .charts-grid) {
+    grid-template-columns: 1fr !important;
+  }
+  /* Hide labels in sidebar widgets */
+  .sidebar-widgets .host-widget-label {
+    display: none;
+  }
+  .sidebar-widgets .host-widget-value {
+    font-size: 13px;
+  }
+  .host-widget-bar {
+    display: none;
+  }
+}
+
 /* ─── Terminal Panel (minimized) ─── */
 .terminal-min {
   height: 36px; background: var(--bg-secondary);

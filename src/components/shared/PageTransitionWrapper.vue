@@ -38,7 +38,9 @@ function onAfterLeave(el: Element) {
     @before-leave="onBeforeLeave"
     @after-leave="onAfterLeave"
   >
-    <slot />
+    <div class="page-transition-root">
+      <slot />
+    </div>
   </Transition>
 </template>
 

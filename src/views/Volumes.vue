@@ -68,6 +68,7 @@ function getVolumeCallbacks(v: { name: string; driver: string; mountpoint: strin
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
     <i class="fa-solid fa-chevron-right"></i> <span class="current">Volumes</span>
@@ -145,5 +146,6 @@ function getVolumeCallbacks(v: { name: string; driver: string; mountpoint: strin
         <button class="btn btn-primary" @click="createVolume"><i class="fa-solid fa-plus"></i> Create</button>
       </div>
     </div>
+  </div>
   </div>
 </template>

@@ -164,6 +164,7 @@ async function exportHistory() {
 </script>
 
 <template>
+  <div class="view-root">
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
@@ -323,6 +324,7 @@ async function exportHistory() {
       </div>
     </template>
   </template>
+  </div>
 </template>
 
 <style scoped>

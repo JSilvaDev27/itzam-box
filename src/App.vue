@@ -219,9 +219,11 @@ const sidebarGroups = [
       </aside>
 
       <main class="content">
-        <PageTransitionWrapper>
-          <router-view />
-        </PageTransitionWrapper>
+        <router-view v-slot="{ Component }">
+          <PageTransitionWrapper>
+            <component :is="Component" />
+          </PageTransitionWrapper>
+        </router-view>
       </main>
     </div>
 

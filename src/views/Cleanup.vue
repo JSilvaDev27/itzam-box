@@ -29,9 +29,9 @@ async function prune(type: string) {
 </script>
 
 <template>
-  <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Cleanup</span></div>
-
-  <div style="display:flex;align-items:center;justify-content:space-between;">
+  <div class="view-root">
+    <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Cleanup</span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
     <h1 class="text-h1">System Cleanup</h1>
     <button class="btn btn-secondary" @click="loadData" :disabled="loading">
       <i class="fa-solid fa-rotate" :class="{ 'fa-spin': loading }"></i> Refresh
@@ -78,5 +78,6 @@ async function prune(type: string) {
       <div class="metric-value" style="font-size:1.5rem;color:var(--accent-red)">{{ fmt(usage.total_reclaimable_bytes) }}</div>
       <button class="btn btn-danger btn-sm" @click="prune('containers');prune('images');prune('volumes');prune('networks')"><i class="fa-solid fa-broom"></i> Prune All</button>
     </div>
+  </div>
   </div>
 </template>

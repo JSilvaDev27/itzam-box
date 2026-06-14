@@ -16,6 +16,7 @@ onMounted(async () => {
 })
 </script>
 <template>
+  <div class="view-root">
   <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Help</span></div>
   <h1 class="text-h1">Help</h1>
 
@@ -50,5 +51,6 @@ onMounted(async () => {
         <div class="data-row" style="padding:6px 0;border:none"><span>Escape</span><span style="margin-left:auto;color:var(--text-muted)">Close modal/panel</span></div>
       </div>
     </div>
+  </div>
   </div>
 </template>

@@ -227,6 +227,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="view-root">
   <!-- ═══ Breadcrumb ═══ -->
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i>
@@ -427,6 +428,7 @@ onUnmounted(() => {
       </div>
     </div>
   </template>
+  </div>
 </template>
 
 <style scoped>

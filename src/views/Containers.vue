@@ -98,6 +98,7 @@ async function handleAction(id: string, action: string) {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Containers</span></div>
   
   <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -184,4 +185,5 @@ async function handleAction(id: string, action: string) {
       </div>
     </template>
   </template>
+  </div>
 </template>

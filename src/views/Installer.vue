@@ -229,6 +229,7 @@ function goToDashboard() {
 </script>
 
 <template>
+  <div class="view-root">
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
@@ -642,6 +643,7 @@ function goToDashboard() {
         </div>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

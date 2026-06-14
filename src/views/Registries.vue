@@ -257,6 +257,7 @@ function isLoggedIn(r: RegistrySafe): boolean {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
     <i class="fa-solid fa-chevron-right"></i> <span class="current">Registries</span>
@@ -489,6 +490,7 @@ function isLoggedIn(r: RegistrySafe): boolean {
         </button>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

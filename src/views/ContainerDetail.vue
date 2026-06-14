@@ -320,6 +320,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="view-root">
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span @click="router.push('/')" style="cursor:pointer">Home</span>
@@ -442,7 +443,7 @@ onUnmounted(() => {
     </div>
 
     <!-- Tab Content -->
-    <div class="tab-content">
+    <div class="tab-content" :key="containerId">
       <!-- ════════ Info Tab ════════ -->
       <template v-if="activeTab === 'info'">
         <div class="inspect-grid">
@@ -812,6 +813,7 @@ onUnmounted(() => {
       </template>
     </div>
   </template>
+  </div>
 </template>
 
 <style scoped>

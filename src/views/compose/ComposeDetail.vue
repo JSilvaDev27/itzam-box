@@ -173,6 +173,7 @@ function getServicePorts(serviceName: string): string {
 </script>
 
 <template>
+  <div class="view-root">
   <!-- Breadcrumb -->
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span @click="router.push('/')" style="cursor:pointer">Home</span>
@@ -391,6 +392,7 @@ function getServicePorts(serviceName: string): string {
       </template>
     </div>
   </template>
+  </div>
 </template>
 
 <style scoped>

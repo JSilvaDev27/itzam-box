@@ -12,6 +12,7 @@ function setLightTheme() { toggleTheme(); }
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
     <i class="fa-solid fa-chevron-right"></i> <span class="current">{{ t.settings.title }}</span>
@@ -61,5 +62,6 @@ function setLightTheme() { toggleTheme(); }
         <div style="display:flex;justify-content:space-between"><span style="color:var(--text-muted)">© 2026</span><span>SodigTech</span></div>
       </div>
     </section>
+  </div>
   </div>
 </template>

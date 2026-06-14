@@ -169,6 +169,7 @@ async function handleReload() {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i>
     <span @click="router.push('/')" style="cursor:pointer">Home</span>
@@ -250,6 +251,7 @@ async function handleReload() {
         </span>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

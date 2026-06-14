@@ -65,6 +65,7 @@ function getNetworkCallbacks(n: NetworkInfo) {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb"><i class="fa-solid fa-house"></i> <span>Home</span> <i class="fa-solid fa-chevron-right"></i> <span class="current">Networks</span></div>
   
   <div style="display:flex;align-items:center;justify-content:space-between;">
@@ -123,5 +124,6 @@ function getNetworkCallbacks(n: NetworkInfo) {
       </div>
       <div class="modal-footer"><button class="btn btn-secondary" @click="showCreate = false">Cancel</button><button class="btn btn-primary" @click="createNetwork"><i class="fa-solid fa-plus"></i> Create</button></div>
     </div>
+  </div>
   </div>
 </template>

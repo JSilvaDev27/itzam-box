@@ -142,6 +142,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span>Home</span>
     <i class="fa-solid fa-chevron-right"></i> <span>System</span>
@@ -248,6 +249,7 @@ onUnmounted(() => {
       Click and drag on the chart to zoom into a region
     </div>
   </template>
+  </div>
 </template>
 
 <style scoped>

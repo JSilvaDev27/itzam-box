@@ -66,6 +66,7 @@ async function handleLogs(project: ComposeProject) {
 </script>
 
 <template>
+  <div class="view-root">
   <div class="breadcrumb">
     <i class="fa-solid fa-house"></i> <span @click="router.push('/')" style="cursor:pointer">Home</span>
     <i class="fa-solid fa-chevron-right"></i>
@@ -189,6 +190,7 @@ async function handleLogs(project: ComposeProject) {
       :description="'No compose projects match &quot;' + searchQuery + '&quot;'"
     />
   </template>
+  </div>
 </template>
 
 <style scoped>
