@@ -466,7 +466,7 @@ fn resolve_compose_file(project_path: &str) -> Result<String, String> {
         }
     }
     Err(format!(
-        "No docker-compose.yml or compose.yaml found in {}",
+        "No compose file (compose.yml or docker-compose.yml) found in {}",
         project_path
     ))
 }

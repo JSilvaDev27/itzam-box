@@ -56,6 +56,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -239,6 +240,8 @@ pub fn run() {
             // Settings
             commands::settings::get_config,
             commands::settings::set_config,
+            commands::settings::export_settings,
+            commands::settings::import_settings,
             // Host Metrics
             commands::host_metrics::get_host_metrics,
             // Terminal

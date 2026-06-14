@@ -105,7 +105,7 @@ async function handleLogs(project: ComposeProject) {
     v-if="isEmpty"
     icon="fa-solid fa-layer-group"
     title="No Compose projects found"
-    description="Create a docker-compose.yml file in any directory to get started. ItzamBox will detect it automatically."
+    description="Create a compose.yml (or docker-compose.yml) file in any directory to get started. ItzamBox will detect it automatically."
     action-label="Refresh"
     @action="loadData"
   />

@@ -144,9 +144,9 @@ test.describe('Sprint 21: UI/UX Polish E2E (T-077)', () => {
   // ─────────────────────────────────────────────────────────────────────
   // Scenario 4: Reduced-motion — emulate and confirm animations disable
   // ─────────────────────────────────────────────────────────────────────
-  test('Scenario 4: prefers-reduced-motion disables page and counter animations', async ({ page, context }) => {
-    // Set reduced-motion: reduce at the context level BEFORE navigation.
-    await context.emulateMedia({ reducedMotion: 'reduce' })
+  test('Scenario 4: prefers-reduced-motion disables page and counter animations', async ({ page }) => {
+    // Set reduced-motion: reduce at the page level BEFORE navigation.
+    await page.emulateMedia({ reducedMotion: 'reduce' })
 
     await page.goto('/')
     await waitForApp(page)

@@ -10,7 +10,9 @@ import {
   formatComposeFile,
 } from '../../composables/useDocker'
 import { useNotifications } from '../../composables/useNotifications'
-import * as monaco from 'monaco-editor'
+import type * as Monaco from 'monaco-editor'
+// Monaco is loaded lazily in onMounted via dynamic import to keep initial bundle under 100 KB
+let monacoModule: typeof Monaco | null = null
 
 const route = useRoute()
 const router = useRouter()
@@ -18,9 +20,10 @@ const { success, error, warning, info } = useNotifications()
 
 const projectName = computed(() => route.params.name as string)
 const projectPath = computed(() => (route.query.path as string) || '')
+const composeFileName = ref('compose.yml')
 
 const editorContainer = ref<HTMLDivElement | null>(null)
-let editor: monaco.editor.IStandaloneCodeEditor | null = null
+let editor: Monaco.editor.IStandaloneCodeEditor | null = null
 
 // Status & UI State
 const loading = ref(true)
@@ -41,12 +44,14 @@ onMounted(async () => {
 
   try {
     const content = await readComposeFile(projectPath.value)
+    composeFileName.value = projectPath.value.endsWith('compose.yml') ? 'compose.yml' : 'docker-compose.yml'
     loading.value = false
 
     // Initialize Monaco after DOM updates
-    setTimeout(() => {
+    setTimeout(async () => {
       if (editorContainer.value) {
-        editor = monaco.editor.create(editorContainer.value, {
+        monacoModule = await import('monaco-editor')
+        editor = monacoModule.editor.create(editorContainer.value, {
           value: content,
           language: 'yaml',
           theme: 'vs-dark',
@@ -71,7 +76,7 @@ onMounted(async () => {
         })
 
         // Keyboard Shortcut: Save (Ctrl+S or Cmd+S)
-        editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+        editor.addCommand(monacoModule.KeyMod.CtrlCmd | monacoModule.KeyCode.KeyS, () => {
           handleSave()
         })
       }
@@ -192,7 +197,7 @@ async function handleReload() {
         </button>
         <div class="file-name-title">
           <i class="fa-solid fa-file-code" style="color:var(--accent-purple)"></i>
-          <span>docker-compose.yml</span>
+          <span>{{ composeFileName }}</span>
         </div>
       </div>
       <div class="toolbar-right">
