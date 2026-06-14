@@ -18,6 +18,7 @@ use crate::engine::types::DockerEvent;
 
 /// Holds the optional handle to the running `docker events` child process so
 /// we can kill it when the user stops the stream or the view unmounts.
+#[derive(Default)]
 pub struct EventStreamState {
     pub child: Mutex<Option<tokio::process::Child>>,
 }

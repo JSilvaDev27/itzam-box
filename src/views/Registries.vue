@@ -15,7 +15,6 @@ import {
   listenPushComplete,
   type RegistrySafe,
   type PushLogLine,
-  type PushComplete,
 } from '../composables/useDocker'
 import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
@@ -24,7 +23,7 @@ import ErrorState from '../components/shared/ErrorState.vue'
 
 // ─── State ─────────────────────────────────────────────────────────────────
 
-const { info, success, error: notifyError } = useNotifications()
+const { success, error: notifyError } = useNotifications()
 
 const registries = ref<RegistrySafe[]>([])
 const loading = ref(false)

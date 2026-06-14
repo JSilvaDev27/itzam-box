@@ -227,6 +227,9 @@ function getServicePorts(serviceName: string): string {
           <i class="fa-solid fa-rotate-right" :class="{ 'fa-spin': actionLoading === 'restart' }"></i>
           {{ actionLoading === 'restart' ? 'Restarting...' : 'Restart' }}
         </button>
+        <button class="btn btn-secondary" @click="router.push({ name: 'ComposeEditor', params: { name: projectName }, query: { path: projectPath } })">
+          <i class="fa-solid fa-pen-to-square"></i> Edit
+        </button>
       </div>
     </div>
 

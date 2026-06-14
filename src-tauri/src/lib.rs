@@ -178,6 +178,16 @@ pub fn run() {
             commands::compose::compose_restart,
             commands::compose::compose_logs,
             commands::compose::compose_ps,
+            commands::compose::read_compose_file,
+            commands::compose::write_compose_file,
+            commands::compose::validate_compose_file,
+            commands::compose::format_compose_file,
+            // Notifications
+            commands::notifications::save_notification,
+            commands::notifications::get_notifications,
+            commands::notifications::mark_notification_read,
+            commands::notifications::mark_all_read,
+            commands::notifications::clear_notifications,
             // Registries
             commands::registries::list_registries,
             commands::registries::add_registry,

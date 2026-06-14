@@ -201,7 +201,7 @@ function openSaveModal() {
 async function handleSaveTemplate() {
   if (!saveForm.value.name.trim() || !saveForm.value.image.trim()) return
   try {
-    const id = await saveTemplate({
+    await saveTemplate({
       id: null,
       name: saveForm.value.name.trim(),
       description: saveForm.value.description.trim(),
@@ -317,7 +317,7 @@ async function handleSeed() {
     <div v-else class="template-grid">
       <div
         v-for="template in filteredTemplates"
-        :key="template.id"
+        :key="template.id ?? template.name"
         class="template-card"
       >
         <!-- Card Header -->

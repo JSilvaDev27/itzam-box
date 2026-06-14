@@ -33,6 +33,7 @@ const routes = [
   { path: '/containers/:id/files', name: 'FileExplorer', component: () => import('./views/FileExplorer.vue'), props: true },
   { path: '/compose', name: 'ComposeList', component: () => import('./views/compose/ComposeList.vue') },
   { path: '/compose/:name', name: 'ComposeDetail', component: () => import('./views/compose/ComposeDetail.vue') },
+  { path: '/compose/:name/edit', name: 'ComposeEditor', component: () => import('./views/compose/ComposeEditor.vue') },
   { path: '/network-topology', name: 'NetworkTopology', component: () => import('./views/NetworkTopology.vue') },
   { path: '/registries', name: 'Registries', component: () => import('./views/Registries.vue') },
   { path: '/run-wizard', name: 'RunWizard', component: () => import('./views/RunWizard.vue') },

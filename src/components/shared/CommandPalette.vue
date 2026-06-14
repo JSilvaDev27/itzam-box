@@ -137,12 +137,9 @@ const results = computed(() => {
     if (img.repository.toLowerCase().includes(q) || img.tag.toLowerCase().includes(q))
       items.push({ label: img.repository, meta: img.tag, icon: 'fa-layer-group', to: '/images', group: 'Images' })
   }
-  // Actions & Navigation
+  // Actions & Navigation — Navigation listed FIRST so matching queries
+  // prioritize route items over action items (the first match is auto-selected)
   const actions: PaletteItem[] = [
-    // ── Docker Actions ──
-    { label: 'Pull Image', meta: 'Download from registry', icon: 'fa-cloud-arrow-down', group: 'Docker Actions', action: pullImageAction },
-    { label: 'Prune All', meta: 'Clean unused containers, images, volumes, networks', icon: 'fa-broom', group: 'Docker Actions', action: pruneAllAction },
-    { label: 'Start All Stopped', meta: 'Restart all exited containers', icon: 'fa-play', group: 'Docker Actions', action: startAllStoppedAction },
     // ── Navigation ──
     { label: 'Dashboard', meta: 'Go to Dashboard', icon: 'fa-chart-line', group: 'Navigation', to: '/' },
     { label: 'Containers', meta: 'View all containers', icon: 'fa-cubes', group: 'Navigation', to: '/containers' },
@@ -150,6 +147,10 @@ const results = computed(() => {
     { label: 'Volumes', meta: 'View all volumes', icon: 'fa-database', group: 'Navigation', to: '/volumes' },
     { label: 'Networks', meta: 'View all networks', icon: 'fa-network-wired', group: 'Navigation', to: '/networks' },
     { label: 'Settings', meta: 'App preferences', icon: 'fa-gear', group: 'Navigation', to: '/settings' },
+    // ── Docker Actions ──
+    { label: 'Pull Image', meta: 'Download from registry', icon: 'fa-cloud-arrow-down', group: 'Docker Actions', action: pullImageAction },
+    { label: 'Prune All', meta: 'Clean unused containers, images, volumes, networks', icon: 'fa-broom', group: 'Docker Actions', action: pruneAllAction },
+    { label: 'Start All Stopped', meta: 'Restart all exited containers', icon: 'fa-play', group: 'Docker Actions', action: startAllStoppedAction },
     // ── App ──
     { label: 'Toggle Theme', meta: 'Dark/Light mode', icon: 'fa-moon', group: 'App', action: toggleThemeAction },
   ]
@@ -170,8 +171,7 @@ watch(visible, (v) => { if (v) { selectedIdx.value = 0; if (!containers.value.le
         <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--border-color)">
           <i class="fa-solid fa-magnifying-glass" style="color:var(--accent-cyan)"></i>
           <input v-model="query" placeholder="Search containers, images, actions..." ref="searchInput"
-            style="flex:1;background:none;border:none;outline:none;color:var(--text-main);font-size:14px;font-family:var(--font-sans)"
-            @keydown.stop>
+            style="flex:1;background:none;border:none;outline:none;color:var(--text-main);font-size:14px;font-family:var(--font-sans)">
           <kbd style="font-size:10px;background:var(--bg-tertiary);border:1px solid var(--border-color);border-radius:3px;padding:2px 6px;font-family:var(--font-mono);color:var(--text-muted)">Esc</kbd>
         </div>
         <div v-if="results.length" style="max-height:360px;overflow-y:auto;padding:6px">

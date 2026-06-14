@@ -9,6 +9,7 @@ pub mod host_metrics;
 pub mod images;
 pub mod installer;
 pub mod networks;
+pub mod notifications;
 pub mod registries;
 pub mod scanner;
 pub mod settings;

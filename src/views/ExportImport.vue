@@ -3,10 +3,9 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue'
 import { open, save } from '@tauri-apps/plugin-dialog'
-import { useDocker, type ContainerInfo, type ImageInfo } from '../composables/useDocker'
+import { useDocker } from '../composables/useDocker'
 import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
-import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
 const {
@@ -46,9 +45,10 @@ const loadingImage = ref(false)
 const loadResult = ref<string | null>(null)
 
 // ─── Lifecycle ───────────────────────────────────────────────────────────
-onMounted(async () => {
+async function loadData() {
   loadingContainers.value = true
   loadingImages.value = true
+  pageError.value = null
   try {
     await fetchContainers(true)
   } catch (e: any) {
@@ -63,13 +63,11 @@ onMounted(async () => {
     console.warn('Failed to fetch images:', e.toString())
   }
   loadingImages.value = false
-})
+}
+
+onMounted(loadData)
 
 // ─── Computed ────────────────────────────────────────────────────────────
-const runningContainers = computed(() =>
-  containers.value.filter(c => c.state === 'running')
-)
-
 const allContainers = computed(() => containers.value)
 
 const localImages = computed(() => images.value)
@@ -544,7 +542,7 @@ function onDragLeave() {
     v-if="pageError"
     :message="pageError"
     suggestion="Make sure Docker is running and try again."
-    @retry="onMounted"
+    @retry="loadData"
   />
 </template>
 

@@ -10,10 +10,11 @@ import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
 const router = useRouter()
-const { containers, fetchContainers, startContainer, stopContainer, restartContainer, pauseContainer, unpauseContainer, removeContainer } = useDocker()
+const { containers, fetchContainers, startContainer, stopContainer, restartContainer, pauseContainer, unpauseContainer, removeContainer, error: dockerError } = useDocker()
 const { show } = useContextMenu()
 const loading = ref(false)
-const error = ref<string | null>(null)
+// Alias the reactive error ref from useDocker so the template's v-if="error" picks up errors from fetchContainers
+const error = dockerError
 
 onMounted(() => loadData())
 
@@ -124,7 +125,7 @@ async function handleAction(id: string, action: string) {
             <button v-if="c.state === 'stopped' || c.state === 'exited'" class="action-btn" @click.stop="handleAction(c.id, 'start')"><i class="fa-solid fa-play"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'stop')"><i class="fa-solid fa-stop"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'restart')"><i class="fa-solid fa-rotate-right"></i></button>
-            <button v-if="c.state !== 'running'" class="action-btn" @click.stop="handleAction(c.id, 'remove')"><i class="fa-solid fa-trash-can"></i></button>
+            <button v-if="c.state !== 'running'" class="action-btn" data-testid="remove-container" @click.stop="handleAction(c.id, 'remove')"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         </div>
       </div>
@@ -145,7 +146,7 @@ async function handleAction(id: string, action: string) {
             <button v-if="c.state === 'stopped' || c.state === 'exited'" class="action-btn" @click.stop="handleAction(c.id, 'start')"><i class="fa-solid fa-play"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'stop')"><i class="fa-solid fa-stop"></i></button>
             <button v-if="c.state === 'running'" class="action-btn" @click.stop="handleAction(c.id, 'restart')"><i class="fa-solid fa-rotate-right"></i></button>
-            <button v-if="c.state !== 'running'" class="action-btn" @click.stop="handleAction(c.id, 'remove')"><i class="fa-solid fa-trash-can"></i></button>
+            <button v-if="c.state !== 'running'" class="action-btn" data-testid="remove-container" @click.stop="handleAction(c.id, 'remove')"><i class="fa-solid fa-trash-can"></i></button>
           </div>
         </div>
       </div>

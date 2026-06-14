@@ -113,7 +113,7 @@ export function useDocker() {
   async function fetchImages() {
     try {
       images.value = await invoke<ImageInfo[]>('list_images')
-      error.value = null
+      // Do NOT clear error ref — containers fetch is the authoritative error source
     } catch (e: any) {
       // Don't overwrite error from containers — images are non-critical
       console.warn('Failed to fetch images:', e.toString())
@@ -123,7 +123,7 @@ export function useDocker() {
   async function fetchVolumes() {
     try {
       volumes.value = await invoke<VolumeInfo[]>('list_volumes')
-      error.value = null
+      // Do NOT clear error ref — containers fetch is the authoritative error source
     } catch (e: any) {
       console.warn('Failed to fetch volumes:', e.toString())
     }
@@ -132,7 +132,7 @@ export function useDocker() {
   async function fetchNetworks() {
     try {
       networks.value = await invoke<NetworkInfo[]>('list_networks')
-      error.value = null
+      // Do NOT clear error ref — containers fetch is the authoritative error source
     } catch (e: any) {
       console.warn('Failed to fetch networks:', e.toString())
     }
@@ -574,6 +574,28 @@ export async function composeLogs(projectPath: string, tail: number, services?: 
 export async function composePs(projectPath: string): Promise<ComposeServiceStatus[]> {
   return invoke<ComposeServiceStatus[]>('compose_ps', { projectPath })
 }
+
+export interface ValidationResult {
+  valid: boolean
+  error: string | null
+}
+
+export async function readComposeFile(path: string): Promise<string> {
+  return invoke<string>('read_compose_file', { path })
+}
+
+export async function writeComposeFile(path: string, content: string): Promise<void> {
+  return invoke<void>('write_compose_file', { path, content })
+}
+
+export async function validateComposeFile(path: string): Promise<ValidationResult> {
+  return invoke<ValidationResult>('validate_compose_file', { path })
+}
+
+export async function formatComposeFile(path: string): Promise<string> {
+  return invoke<string>('format_compose_file', { path })
+}
+
 
 // ─── Container Templates Types & Functions ────────────────────────────────
 

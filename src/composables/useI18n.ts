@@ -35,20 +35,24 @@ const en: Translations = {
 
 const locales: Record<Locale, Translations> = { es, en }
 const currentLocale = ref<Locale>('es')
-const t = computed(() => locales[currentLocale.value])
+const translations = ref<Translations>(locales[currentLocale.value])
 
 export function useI18n() {
   async function init() {
     try {
       const saved = await invoke<string>('get_config', { key: 'lang' })
-      if (saved === 'en') currentLocale.value = 'en'
-    } catch { currentLocale.value = 'es' }
+      if (saved === 'en') {
+        currentLocale.value = 'en'
+        translations.value = locales[currentLocale.value]
+      }
+    } catch { /* use default */ }
   }
 
-  async function setLocale(locale: Locale) {
+  function setLocale(locale: Locale) {
     currentLocale.value = locale
-    try { await invoke('set_config', { key: 'lang', value: locale }) } catch { /* ok */ }
+    translations.value = locales[locale]
+    invoke('set_config', { key: 'lang', value: locale }).catch(() => { /* ok */ })
   }
 
-  return { t, locale: currentLocale, setLocale, init }
+  return { t: translations, locale: currentLocale, setLocale, init }
 }

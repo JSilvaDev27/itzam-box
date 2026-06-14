@@ -22,6 +22,8 @@ pub fn setup_database(db_path: PathBuf) -> Result<Connection, String> {
         .map_err(|e| format!("Migration 001 failed: {}", e))?;
     conn.execute_batch(include_str!("../../migrations/002_templates.sql"))
         .map_err(|e| format!("Migration 002 failed: {}", e))?;
+    conn.execute_batch(include_str!("../../migrations/003_notifications.sql"))
+        .map_err(|e| format!("Migration 003 failed: {}", e))?;
 
     // Insert default configurations if not present
     let defaults = [

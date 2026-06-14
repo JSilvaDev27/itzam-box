@@ -135,7 +135,8 @@ function buildConfig(): ChartConfiguration<'line', number[], string> {
               return ''
             },
             label(item) {
-              return `CPU: ${item.parsed.y.toFixed(1)}% (${props.cores} cores)`
+              const val = item.parsed.y ?? 0
+              return `CPU: ${val.toFixed(1)}% (${props.cores} cores)`
             },
           },
         },

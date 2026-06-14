@@ -137,8 +137,9 @@ function buildConfig(): ChartConfiguration<'line', number[], string> {
               return ''
             },
             label(item) {
-              const usedGb = safeGb((props.totalGb * item.parsed.y) / 100)
-              return `RAM: ${usedGb} GB / ${props.totalGb.toFixed(1)} GB (${item.parsed.y.toFixed(1)}%)`
+              const yVal = item.parsed.y ?? 0
+              const usedGb = safeGb((props.totalGb * yVal) / 100)
+              return `RAM: ${usedGb} GB / ${props.totalGb.toFixed(1)} GB (${yVal.toFixed(1)}%)`
             },
           },
         },

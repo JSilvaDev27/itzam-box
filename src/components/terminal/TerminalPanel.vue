@@ -324,13 +324,14 @@ defineExpose({ openSession })
       <div class="terminal-tab-add" @click.stop>
         <button
           class="terminal-tab-add-btn"
+          data-testid="terminal-add-btn"
           @click="showContainerDropdown = !showContainerDropdown"
           :title="t.terminal.new_terminal || 'Open new terminal\u2026'"
           :aria-label="t.terminal.new_terminal || 'Open new terminal'"
         >+</button>
-        <div v-if="showContainerDropdown" class="terminal-dropdown">
+        <div v-if="showContainerDropdown" class="terminal-dropdown" data-testid="terminal-add-menu">
           <div class="terminal-dropdown-item" @click="openSession('host')">
-            <i class="fa-solid fa-server"></i> {{ t.terminal.host || 'Host Terminal' }}
+            <i class="fa-solid fa-server"></i> Host Terminal
           </div>
           <div class="terminal-dropdown-divider"></div>
           <template v-if="runningContainers.length > 0">

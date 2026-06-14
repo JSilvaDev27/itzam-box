@@ -98,15 +98,6 @@ const steps = [
   { number: 10, label: 'Review & Create', icon: 'fa-solid fa-check' },
 ]
 
-const completedSteps = computed(() => {
-  const completed: number[] = []
-  if (wizard.selectedImage || wizard.manualImageName) completed.push(1)
-  if (wizard.autoGenerateName || wizard.containerName.trim()) completed.push(2)
-  if (wizard.network) completed.push(6)
-  if (wizard.restartPolicy) completed.push(7)
-  return completed
-})
-
 function isStepCompleted(step: number): boolean {
   if (step === 1) return !!getFinalImage()
   if (step === 2) return wizard.autoGenerateName || wizard.containerName.trim().length > 0
@@ -278,7 +269,7 @@ const stepErrors = computed(() => {
   return errors
 })
 
-const currentError = computed(() => stepErrors.value[currentStep.value] || '')
+
 
 // ─── Navigation ───────────────────────────────────────────────────────────
 function canGoNext(): boolean {
@@ -305,7 +296,7 @@ function prevStep() {
 }
 
 function cancel() {
-  router.push('/')
+  router.push('/containers')
 }
 
 // ─── Docker Run Command Generator (Step 10) ───────────────────────────────

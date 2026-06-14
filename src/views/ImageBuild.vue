@@ -212,7 +212,7 @@ async function handleBuild() {
     if (status.value === 'building') {
       status.value = 'error'
       buildError.value = e?.toString() ?? 'Build failed'
-      notifyError('Build failed', buildError.value)
+      notifyError('Build failed', buildError.value || undefined)
     }
   }
 }

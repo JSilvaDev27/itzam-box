@@ -184,9 +184,10 @@ async function startInstallation() {
     const msg = e.toString?.() ?? 'Installation failed'
     installError.value = msg
     logLines.value.push(`❌ ${msg}`)
+    const currentProgress = progress.value as InstallProgress | null
     progress.value = {
-      step: progress.value?.step ?? 1,
-      total_steps: progress.value?.total_steps ?? 1,
+      step: currentProgress?.step ?? 1,
+      total_steps: currentProgress?.total_steps ?? 1,
       message: msg,
       status: 'error',
     }

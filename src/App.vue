@@ -12,19 +12,32 @@ import { useTheme } from './composables/useTheme'
 import { useI18n } from './composables/useI18n'
 import { useNotifications } from './composables/useNotifications'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
+import { relativeTime } from './composables/useDocker'
 
 const router = useRouter()
 const { isDark, init: initTheme, toggleTheme } = useTheme()
 const { t, init: initI18n } = useI18n()
-const { toasts, unreadCount, dismissToast } = useNotifications()
+const {
+  toasts,
+  unreadCount,
+  dismissToast,
+  notifications,
+  loadNotifications,
+  markRead,
+  markAllRead,
+  clearAll,
+} = useNotifications()
+
 const sidebarCollapsed = ref(false)
 const showOnboarding = ref(false)
+const showNotificationsPanel = ref(false)
 
 useKeyboardShortcuts()
 
 onMounted(async () => {
   await initTheme()
   await initI18n()
+  await loadNotifications()
 
   // Check if onboarding has been completed
   try {
@@ -37,6 +50,13 @@ onMounted(async () => {
     showOnboarding.value = true
   }
 })
+
+function toggleNotificationsPanel() {
+  showNotificationsPanel.value = !showNotificationsPanel.value
+  if (showNotificationsPanel.value) {
+    loadNotifications()
+  }
+}
 
 const navItems = [
   { to: '/', icon: 'fa-chart-line', label: 'Dashboard' },
@@ -69,10 +89,56 @@ const navItems = [
           <i class="fa-solid fa-magnifying-glass"></i>
           <input type="text" :placeholder="t.common.search || 'Search...'">
         </div>
-        <button class="header-btn" title="Notifications" style="position:relative">
-          <i class="fa-solid fa-bell"></i>
-          <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
-        </button>
+        <div style="position:relative">
+          <button class="header-btn" title="Notifications" @click="toggleNotificationsPanel">
+            <i class="fa-solid fa-bell"></i>
+            <span v-if="unreadCount > 0" class="badge">{{ unreadCount }}</span>
+          </button>
+
+          <!-- Persisted Notifications Center Dropdown -->
+          <div v-if="showNotificationsPanel" class="notifications-panel">
+            <div class="panel-header">
+              <span>Notifications ({{ unreadCount }} unread)</span>
+              <div class="panel-actions">
+                <button @click="markAllRead" class="action-btn-text">Mark all read</button>
+                <button @click="clearAll" class="action-btn-text delete">Clear all</button>
+              </div>
+            </div>
+            <div class="panel-content">
+              <div v-if="notifications.length === 0" class="panel-empty">
+                <i class="fa-solid fa-bell-slash"></i>
+                <p>No notifications yet</p>
+              </div>
+              <div
+                v-for="item in notifications.slice(0, 50)"
+                :key="item.id"
+                class="notification-item"
+                :class="{ 'unread': !item.read }"
+                @click="markRead(item.id)"
+              >
+                <div class="item-icon-wrapper">
+                  <i
+                    :class="
+                      item.type === 'success'
+                        ? 'fa-solid fa-circle-check text-success'
+                        : item.type === 'error'
+                        ? 'fa-solid fa-circle-xmark text-error'
+                        : item.type === 'warning'
+                        ? 'fa-solid fa-triangle-exclamation text-warning'
+                        : 'fa-solid fa-circle-info text-info'
+                    "
+                  ></i>
+                </div>
+                <div class="item-body">
+                  <div class="item-title">{{ item.title }}</div>
+                  <div class="item-message">{{ item.message }}</div>
+                  <div class="item-time">{{ relativeTime(Math.floor(item.timestamp / 1000)) }}</div>
+                </div>
+                <div class="item-indicator" v-if="!item.read"></div>
+              </div>
+            </div>
+          </div>
+        </div>
         <button class="header-btn" @click="toggleTheme" title="Toggle theme">
           <i :class="isDark ? 'fa-solid fa-moon' : 'fa-solid fa-sun'"></i>
         </button>
@@ -154,3 +220,141 @@ const navItems = [
     <OnboardingWizard v-if="showOnboarding" @done="showOnboarding = false" />
   </div>
 </template>
+
+<style>
+/* Global style block to define notification center drop-down */
+.notifications-panel {
+  position: absolute;
+  top: 45px;
+  right: 0;
+  width: 320px;
+  max-height: 400px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--border-color);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+.panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn-text {
+  background: none;
+  border: none;
+  color: var(--accent-cyan);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.action-btn-text.delete {
+  color: var(--accent-red);
+}
+
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+
+.panel-empty i {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.panel-empty p {
+  margin: 0;
+  font-size: 12px;
+}
+
+.notification-item {
+  display: flex;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+  position: relative;
+}
+
+.notification-item:hover {
+  background: var(--bg-hover);
+}
+
+.notification-item.unread {
+  background: var(--bg-tertiary);
+}
+
+.item-icon-wrapper {
+  margin-right: 10px;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 2px;
+}
+
+.item-message {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.item-time {
+  font-size: 9px;
+  color: var(--text-disabled);
+}
+
+.item-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent-cyan);
+  border-radius: 50%;
+}
+
+.text-success { color: var(--accent-green); }
+.text-error { color: var(--accent-red); }
+.text-warning { color: var(--accent-yellow); }
+.text-info { color: var(--accent-blue); }
+</style>

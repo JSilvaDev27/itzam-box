@@ -26,7 +26,12 @@ let interval: number | undefined
 let metricsInterval: number | undefined
 
 onMounted(async () => {
-  await refreshAll()
+  try {
+    await refreshAll()
+  } catch (e: any) {
+    // refreshAll sets error ref internally; ensure firstLoadDone so ErrorState renders
+    error.value = e?.toString?.() || String(e)
+  }
   firstLoadDone.value = true
   interval = window.setInterval(() => refreshAll(), 5000)
   // Separate 2s interval for host-metrics polling → time-series charts

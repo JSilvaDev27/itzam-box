@@ -334,11 +334,9 @@ pub async fn get_scan_history(
         .map_err(|e| format!("DB query failed: {}", e))?;
 
     let mut reports = Vec::new();
-    for row in rows {
-        if let Ok(json) = row {
-            if let Ok(report) = serde_json::from_str::<VulnerabilityReport>(&json) {
-                reports.push(report);
-            }
+    for json in rows.flatten() {
+        if let Ok(report) = serde_json::from_str::<VulnerabilityReport>(&json) {
+            reports.push(report);
         }
     }
 

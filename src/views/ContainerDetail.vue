@@ -606,11 +606,11 @@ onUnmounted(() => {
             </div>
             <div class="inspect-row">
               <span class="inspect-label">IP Address</span>
-              <span class="inspect-value">{{ net.IPAddress || '--' }}{{ net.IPPrefixLen ? '/' + net.IPPrefixLen : '' }}</span>
+              <span class="inspect-value" data-testid="network-ip">{{ net.IPAddress || '--' }}{{ net.IPPrefixLen ? '/' + net.IPPrefixLen : '' }}</span>
             </div>
             <div class="inspect-row">
               <span class="inspect-label">Gateway</span>
-              <span class="inspect-value">{{ net.Gateway || '--' }}</span>
+              <span class="inspect-value" data-testid="network-gateway">{{ net.Gateway || '--' }}</span>
             </div>
             <div class="inspect-row">
               <span class="inspect-label">MAC Address</span>
@@ -691,8 +691,8 @@ onUnmounted(() => {
               <span style="width:40px"></span>
             </div>
             <div v-for="(label, idx) in labelsArray" :key="idx" class="data-row" style="cursor:default;padding:8px 20px">
-              <span style="flex:0 0 220px;font-family:var(--font-mono);font-size:11px;color:var(--accent-cyan);word-break:break-all">{{ label.key }}</span>
-              <span style="flex:1;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);word-break:break-all">{{ label.value }}</span>
+              <span style="flex:0 0 220px;font-family:var(--font-mono);font-size:11px;color:var(--accent-cyan);word-break:break-all" data-testid="label-key">{{ label.key }}</span>
+              <span style="flex:1;font-family:var(--font-mono);font-size:11px;color:var(--text-muted);word-break:break-all" data-testid="label-value">{{ label.value }}</span>
               <button class="action-btn" @click="copyToClipboard(label.key + '=' + label.value)" title="Copy">
                 <i class="fa-solid fa-copy"></i>
               </button>
@@ -742,7 +742,7 @@ onUnmounted(() => {
       <!-- ════════ Stats Tab ════════ -->
       <template v-if="activeTab === 'stats'">
         <template v-if="isRunning">
-          <div style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <div data-testid="stats-polling-indicator" style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
             <span style="font-size:12px;color:var(--text-muted)">
               <i class="fa-solid fa-circle" style="color:var(--accent-green);font-size:8px;margin-right:4px"></i>
               Live (polling every 3s)

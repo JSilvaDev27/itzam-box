@@ -52,7 +52,7 @@ fn compose_is_plugin() -> bool {
         Command::new("docker")
             .args(["compose", "version"])
             .output()
-            .map_or(false, |o| o.status.success())
+            .is_ok_and(|o| o.status.success())
     })
 }
 
@@ -62,7 +62,7 @@ fn compose_is_standalone() -> bool {
         Command::new("docker-compose")
             .arg("version")
             .output()
-            .map_or(false, |o| o.status.success())
+            .is_ok_and(|o| o.status.success())
     })
 }
 
@@ -357,7 +357,7 @@ fn parse_ps_text(output: &str) -> Vec<ComposeServiceStatus> {
         // Typical output columns: NAME, IMAGE, COMMAND, SERVICE, CREATED, STATUS, PORTS
         // We split by 2+ spaces to handle the variable-width columns
         let columns: Vec<&str> = line
-            .split(|c: char| c == ' ' || c == '\t')
+            .split([' ', '\t'])
             .filter(|s| !s.is_empty())
             .collect();
 
@@ -630,3 +630,98 @@ pub async fn compose_ps(project_path: String) -> Result<Vec<ComposeServiceStatus
     let out = run_compose(&text_args, &compose_file)?;
     Ok(parse_ps_text(&out))
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct ValidationResult {
+    pub valid: bool,
+    pub error: Option<String>,
+}
+
+/// Read compose file content directly
+#[tauri::command]
+pub async fn read_compose_file(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    if p.is_dir() {
+        let file_path = resolve_compose_file(&path)?;
+        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read compose file: {}", e))
+    } else {
+        std::fs::read_to_string(p).map_err(|e| format!("Failed to read compose file: {}", e))
+    }
+}
+
+/// Write compose file content directly
+#[tauri::command]
+pub async fn write_compose_file(path: String, content: String) -> Result<(), String> {
+    let p = Path::new(&path);
+    let target = if p.is_dir() {
+        PathBuf::from(resolve_compose_file(&path)?)
+    } else {
+        p.to_path_buf()
+    };
+
+    std::fs::write(&target, content).map_err(|e| format!("Failed to write compose file: {}", e))
+}
+
+/// Validate compose file syntax using `docker compose config`
+#[tauri::command]
+pub async fn validate_compose_file(path: String) -> Result<ValidationResult, String> {
+    ensure_compose()?;
+    let p = Path::new(&path);
+    let compose_file = if p.is_dir() {
+        resolve_compose_file(&path)?
+    } else {
+        path.clone()
+    };
+
+    let mut cmd = build_compose_cmd(&["config", "--quiet"], &compose_file);
+    match cmd.output() {
+        Ok(output) => {
+            if output.status.success() {
+                Ok(ValidationResult {
+                    valid: true,
+                    error: None,
+                })
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+                Ok(ValidationResult {
+                    valid: false,
+                    error: Some(stderr),
+                })
+            }
+        }
+        Err(e) => Err(format!("Failed to run validation command: {}", e)),
+    }
+}
+
+/// Format compose file content using prettier
+#[tauri::command]
+pub async fn format_compose_file(path: String) -> Result<String, String> {
+    let p = Path::new(&path);
+    let compose_file = if p.is_dir() {
+        resolve_compose_file(&path)?
+    } else {
+        path.clone()
+    };
+
+    // Use npx prettier to format
+    let output = Command::new("npx")
+        .args(["prettier", "--parser", "yaml", &compose_file])
+        .output();
+
+    match output {
+        Ok(out) => {
+            if out.status.success() {
+                let formatted = String::from_utf8_lossy(&out.stdout).to_string();
+                Ok(formatted)
+            } else {
+                let stderr = String::from_utf8_lossy(&out.stderr).to_string();
+                Err(format!("Prettier formatting failed: {}", stderr))
+            }
+        }
+        Err(_) => {
+            // Fallback: if npx/prettier is not found, just return original content
+            std::fs::read_to_string(&compose_file).map_err(|e| format!("Failed to read fallback: {}", e))
+        }
+    }
+}
+

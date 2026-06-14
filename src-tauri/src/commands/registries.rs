@@ -275,28 +275,24 @@ pub async fn push_image(
     let app_stdout = app.clone();
     let stdout_handle = thread::spawn(move || {
         let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            if let Ok(text) = line {
-                let payload = PushLogLine {
-                    line: text,
-                    stream: "stdout".to_string(),
-                };
-                app_stdout.emit("push-log", payload).ok();
-            }
+        for text in reader.lines().map_while(Result::ok) {
+            let payload = PushLogLine {
+                line: text,
+                stream: "stdout".to_string(),
+            };
+            app_stdout.emit("push-log", payload).ok();
         }
     });
 
     let app_stderr = app.clone();
     let stderr_handle = thread::spawn(move || {
         let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            if let Ok(text) = line {
-                let payload = PushLogLine {
-                    line: text,
-                    stream: "stderr".to_string(),
-                };
-                app_stderr.emit("push-log", payload).ok();
-            }
+        for text in reader.lines().map_while(Result::ok) {
+            let payload = PushLogLine {
+                line: text,
+                stream: "stderr".to_string(),
+            };
+            app_stderr.emit("push-log", payload).ok();
         }
     });
 

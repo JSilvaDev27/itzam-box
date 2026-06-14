@@ -8,14 +8,11 @@ import {
   scanImage,
   getScanHistory,
   listenScanProgress,
-  severityColor,
-  severityBg,
   safeCount,
   type VulnerabilityReport,
   type Vulnerability,
   type ScanProgress,
 } from '../composables/useDocker'
-import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
 
@@ -207,17 +204,7 @@ function nvdLink(vulnId: string): string {
   return `https://nvd.nist.gov/vuln/detail/${vulnId}`
 }
 
-// ─── Summary helpers ──────────────────────────────────────────────────────
 
-function severitySummaryClass(severity: string): string {
-  const map: Record<string, string> = {
-    critical: 'severity-critical',
-    high: 'severity-high',
-    medium: 'severity-medium',
-    low: 'severity-low',
-  }
-  return map[severity.toLowerCase()] || 'severity-low'
-}
 
 function formatTimestamp(ts: number): string {
   const d = new Date(ts * 1000)
