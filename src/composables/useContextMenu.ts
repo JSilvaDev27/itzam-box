@@ -45,23 +45,30 @@ async function copyToClipboard(text: string, label = 'Copied') {
 }
 
 // Build menu items for a container row
-export function containerContextMenu(container: { id: string; name: string; image: string; state: string }) {
+export function containerContextMenu(
+  container: { id: string; name: string; image: string; state: string },
+  callbacks?: {
+    onStart?: () => void; onStop?: () => void; onRestart?: () => void; onPause?: () => void
+    onLogs?: () => void; onTerminal?: () => void; onInspect?: () => void; onFiles?: () => void
+    onRemove?: () => void
+  }
+) {
   return [
     { id: 'copy-id', label: 'Copy Container ID', icon: 'fa-copy', action: () => copyToClipboard(container.id, 'Container ID copied!') },
     { id: 'copy-name', label: 'Copy Name', icon: 'fa-copy', action: () => copyToClipboard(container.name, 'Name copied!') },
     { id: 'copy-image', label: 'Copy Image', icon: 'fa-copy', action: () => copyToClipboard(container.image, 'Image copied!') },
     { id: 'div1', label: '', divider: true },
-    { id: 'start', label: 'Start', icon: 'fa-play', disabled: container.state === 'running' },
-    { id: 'stop', label: 'Stop', icon: 'fa-stop', disabled: container.state !== 'running' },
-    { id: 'restart', label: 'Restart', icon: 'fa-rotate-right', disabled: container.state !== 'running' },
-    { id: 'pause', label: 'Pause', icon: 'fa-pause', disabled: container.state !== 'running' },
+    { id: 'start', label: 'Start', icon: 'fa-play', disabled: container.state === 'running', action: callbacks?.onStart },
+    { id: 'stop', label: 'Stop', icon: 'fa-stop', disabled: container.state !== 'running', action: callbacks?.onStop },
+    { id: 'restart', label: 'Restart', icon: 'fa-rotate-right', disabled: container.state !== 'running', action: callbacks?.onRestart },
+    { id: 'pause', label: 'Pause', icon: 'fa-pause', disabled: container.state !== 'running', action: callbacks?.onPause },
     { id: 'div2', label: '', divider: true },
-    { id: 'logs', label: 'View Logs', icon: 'fa-scroll' },
-    { id: 'terminal', label: 'Open Terminal', icon: 'fa-terminal' },
-    { id: 'inspect', label: 'Inspect', icon: 'fa-magnifying-glass' },
-    { id: 'files', label: 'Browse Files', icon: 'fa-folder-tree' },
+    { id: 'logs', label: 'View Logs', icon: 'fa-scroll', action: callbacks?.onLogs },
+    { id: 'terminal', label: 'Open Terminal', icon: 'fa-terminal', action: callbacks?.onTerminal },
+    { id: 'inspect', label: 'Inspect', icon: 'fa-magnifying-glass', action: callbacks?.onInspect },
+    { id: 'files', label: 'Browse Files', icon: 'fa-folder-tree', action: callbacks?.onFiles },
     { id: 'div3', label: '', divider: true },
-    { id: 'remove', label: 'Remove', icon: 'fa-trash-can', danger: true },
+    { id: 'remove', label: 'Remove', icon: 'fa-trash-can', danger: true, action: callbacks?.onRemove },
   ]
 }
 

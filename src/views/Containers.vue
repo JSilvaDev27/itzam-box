@@ -5,6 +5,7 @@ import { onMounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
+import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
@@ -12,6 +13,7 @@ import ErrorState from '../components/shared/ErrorState.vue'
 const router = useRouter()
 const { containers, fetchContainers, startContainer, stopContainer, restartContainer, pauseContainer, unpauseContainer, removeContainer, error: dockerError } = useDocker()
 const { show } = useContextMenu()
+const { success, error: notifyError } = useNotifications()
 const loading = ref(false)
 // Alias the reactive error ref from useDocker so the template's v-if="error" picks up errors from fetchContainers
 const error = dockerError
@@ -50,6 +52,36 @@ const composeGroups = computed(() => {
 
 function goToDetail(id: string) {
   router.push('/containers/' + id)
+}
+
+function getContainerCallbacks(c: typeof containers.value[0]) {
+  return {
+    onStart: async () => {
+      try { await startContainer(c.id); success('Container started', `${c.name} is now running.`); await fetchContainers(true) }
+      catch (e: any) { notifyError('Failed to start', e.toString()) }
+    },
+    onStop: async () => {
+      try { await stopContainer(c.id); success('Container stopped', `${c.name} has been stopped.`); await fetchContainers(true) }
+      catch (e: any) { notifyError('Failed to stop', e.toString()) }
+    },
+    onRestart: async () => {
+      try { await restartContainer(c.id); success('Container restarted', `${c.name} is restarting.`); await fetchContainers(true) }
+      catch (e: any) { notifyError('Failed to restart', e.toString()) }
+    },
+    onPause: async () => {
+      try { await pauseContainer(c.id); success('Container paused', `${c.name} is now paused.`); await fetchContainers(true) }
+      catch (e: any) { notifyError('Failed to pause', e.toString()) }
+    },
+    onLogs: () => { router.push('/containers/' + c.id + '?tab=logs') },
+    onTerminal: () => { router.push('/containers/' + c.id + '?tab=terminal') },
+    onInspect: () => { router.push('/containers/' + c.id + '?tab=info') },
+    onFiles: () => { router.push('/containers/' + c.id + '?tab=files') },
+    onRemove: async () => {
+      if (!confirm(`Remove container "${c.name}"? This action cannot be undone.`)) return
+      try { await removeContainer(c.id, true); success('Container removed', `${c.name} has been removed.`); await fetchContainers(true) }
+      catch (e: any) { notifyError('Failed to remove', e.toString()) }
+    },
+  }
 }
 
 async function handleAction(id: string, action: string) {
@@ -116,7 +148,7 @@ async function handleAction(id: string, action: string) {
         <div class="compose-group-header">
           <div class="compose-group-name"><i class="fa-solid fa-folder-tree"></i> {{ project }} <span class="tag compose">compose</span></div>
         </div>
-        <div v-for="c in groupContainers" :key="c.id" class="data-row" @click="goToDetail(c.id)" @contextmenu="show($event, containerContextMenu(c))">
+        <div v-for="c in groupContainers" :key="c.id" class="data-row" @click="goToDetail(c.id)" @contextmenu="show($event, containerContextMenu(c, getContainerCallbacks(c)))">
           <span :class="['status-dot', c.state === 'running' ? 'status-dot--running' : c.state === 'paused' ? 'status-dot--paused' : 'status-dot--stopped']"></span>
           <div class="row-info"><div class="row-name">{{ c.name }}</div><div class="row-meta">{{ c.image }}</div></div>
           <span :class="['tag', c.state === 'running' ? 'tag running' : c.state === 'paused' ? 'tag paused' : 'tag stopped']">{{ c.state }}</span>
@@ -137,7 +169,7 @@ async function handleAction(id: string, action: string) {
           <i class="fa-solid fa-cubes" style="font-size:48px;margin-bottom:16px;opacity:0.3"></i>
           <p style="font-size:14px">No containers found</p>
         </div>
-        <div v-for="c in composeGroups.standalone" :key="c.id" class="data-row" @click="goToDetail(c.id)" @contextmenu="show($event, containerContextMenu(c))">
+        <div v-for="c in composeGroups.standalone" :key="c.id" class="data-row" @click="goToDetail(c.id)" @contextmenu="show($event, containerContextMenu(c, getContainerCallbacks(c)))">
           <span :class="['status-dot', c.state === 'running' ? 'status-dot--running' : c.state === 'paused' ? 'status-dot--paused' : 'status-dot--stopped']"></span>
           <div class="row-info"><div class="row-name">{{ c.name }}</div><div class="row-meta">{{ c.image }}</div></div>
           <span :class="['tag', c.state === 'running' ? 'tag running' : c.state === 'paused' ? 'tag paused' : 'tag stopped']">{{ c.state }}</span>
