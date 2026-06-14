@@ -1,7 +1,7 @@
 <!-- ItzamBox — Syntax-highlighted YAML Viewer (Read-Only)
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed } from 'vue'
 
 const props = defineProps<{
   yaml: string

@@ -110,16 +110,16 @@ app.config.errorHandler = (err) => {
 // Register v-click-outside directive (used by K8sToolbar)
 app.directive('click-outside', {
   mounted(el: HTMLElement, binding: any) {
-    el.__clickOutsideHandler = (e: MouseEvent) => {
+    (el as any).__clickOutsideHandler = (e: MouseEvent) => {
       if (!el.contains(e.target as Node) && typeof binding.value === 'function') {
         binding.value()
       }
     }
-    document.addEventListener('click', el.__clickOutsideHandler)
+    document.addEventListener('click', (el as any).__clickOutsideHandler)
   },
   unmounted(el: HTMLElement) {
-    if (el.__clickOutsideHandler) {
-      document.removeEventListener('click', el.__clickOutsideHandler)
+    if ((el as any).__clickOutsideHandler) {
+      document.removeEventListener('click', (el as any).__clickOutsideHandler)
     }
   },
 })

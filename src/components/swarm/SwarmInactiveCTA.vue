@@ -15,14 +15,14 @@ defineEmits<{
         <i class="fa-solid fa-play" aria-hidden="true"></i>
       </div>
       <h3 class="swarm-cta-card__title">
-        {{ $t?.swarm?.init_title ?? 'Initialize New Swarm' }}
+        Initialize Swarm
       </h3>
       <p class="swarm-cta-card__desc">
-        {{ $t?.swarm?.init_desc ?? 'Create a new Swarm cluster. This node will become the first manager node.' }}
+        Create a new Swarm cluster. This node will become the first manager node.
       </p>
       <button class="btn btn-primary" @click="$emit('init')" aria-label="Initialize Swarm">
         <i class="fa-solid fa-play" aria-hidden="true"></i>
-        {{ $t?.swarm?.init_btn ?? 'Initialize Swarm' }}
+        Initialize Swarm
       </button>
     </div>
 
@@ -32,14 +32,14 @@ defineEmits<{
         <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
       </div>
       <h3 class="swarm-cta-card__title">
-        {{ $t?.swarm?.join_title ?? 'Join Existing Swarm' }}
+        Join Existing Swarm
       </h3>
       <p class="swarm-cta-card__desc">
-        {{ $t?.swarm?.join_desc ?? 'Join an existing Swarm cluster using a join token from a manager node.' }}
+        Join an existing Swarm cluster using a join token from a manager node.
       </p>
       <button class="btn btn-secondary" @click="$emit('join')" aria-label="Join Swarm">
         <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
-        {{ $t?.swarm?.join_btn ?? 'Join Swarm' }}
+        Join Swarm
       </button>
     </div>
   </div>

@@ -23,7 +23,7 @@ onMounted(async () => {
   try {
     const { invoke } = await import('@tauri-apps/api/core')
     // The backend exposes a `detect_advertise_addr` helper via swarm_status
-    const hostname = await invoke<{ ip: string }>('get_host_metrics')
+    await invoke<{ ip: string }>('get_host_metrics')
     // Fallback: try docker info
     advertiseAddr.value = '192.168.1.100' // sensible fallback
   } catch {

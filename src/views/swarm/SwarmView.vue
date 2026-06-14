@@ -12,7 +12,7 @@ import SwarmStacksTab from '../../components/swarm/SwarmStacksTab.vue'
 import SwarmTopologyView from '../../components/swarm/SwarmTopologyView.vue'
 import SwarmInspectorDrawer from '../../components/swarm/SwarmInspectorDrawer.vue'
 import SkeletonLoader from '../../components/shared/SkeletonLoader.vue'
-import type { SwarmNode, SwarmService } from '../../composables/useSwarm'
+import type { SwarmNode, SwarmService, SwarmStack } from '../../composables/useSwarm'
 
 const {
   swarmStatus,
@@ -68,9 +68,9 @@ async function openNodeInspector(nodeId: string) {
 }
 
 async function openServiceInspector(serviceId: string) {
-  const found = services.value.find((s: SwarmService) => s.id === serviceId)
+  const found = (services.value as SwarmService[]).find((s: SwarmService) => s.id === serviceId)
   if (!found) return
-  selectedService.value = found
+  selectedService.value = found as SwarmService
   selectedNode.value = null
   try {
     serviceInspectData.value = await inspectService(serviceId)

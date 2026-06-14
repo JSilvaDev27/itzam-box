@@ -3,7 +3,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import type { K8sConfigMap, K8sSecretMeta } from '../../composables/useKubernetes'
-import SecretValueMask from './SecretValueMask.vue'
 
 const props = defineProps<{
   configmaps: K8sConfigMap[]
@@ -44,7 +43,7 @@ function toggleExpand(key: string) {
   else expandedCms.value.add(key)
 }
 
-function copyKeyValue(key: string, value: string) {
+function copyKeyValue(_key: string, value: string) {
   navigator.clipboard?.writeText(value).catch(() => { /* ok */ })
 }
 </script>

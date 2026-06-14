@@ -1,7 +1,7 @@
 <!-- ItzamBox — Kubernetes Cluster Viewer
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useKubernetes } from '../../composables/useKubernetes'
 import K8sToolbar from '../../components/kubernetes/K8sToolbar.vue'
@@ -20,8 +20,8 @@ const {
   activeTab, activeConfigSubTab,
   inspectorOpen, inspectedKind, inspectedName, inspectedNamespace,
   inspectorYaml, inspectorEvents,
-  detectKubectl, loadContexts, switchContext,
-  loadNamespaces, switchNamespace,
+  switchContext,
+  switchNamespace,
   reloadAll, openInspector, closeInspector, initialize,
 } = useKubernetes()
 

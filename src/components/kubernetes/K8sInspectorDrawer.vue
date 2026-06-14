@@ -2,7 +2,7 @@
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import type { ResourceKind, K8sPod, K8sDeployment, K8sService, K8sConfigMap, K8sSecretMeta, K8sContainer, K8sEvent } from '../../composables/useKubernetes'
+import type { ResourceKind, K8sPod, K8sDeployment, K8sService, K8sConfigMap, K8sSecretMeta, K8sEvent } from '../../composables/useKubernetes'
 import YamlViewer from './YamlViewer.vue'
 import SecretValueMask from './SecretValueMask.vue'
 
@@ -188,7 +188,7 @@ function statusClass(status: string | null | undefined): string {
             <div class="k8s-inspector-section">
               <h4 class="k8s-section-title">Pod Conditions</h4>
               <div v-if="pod" class="k8s-conditions-list">
-                <div class="k8s-condition-row" v-for="(val, key) in pod.labels" :key="key">
+                <div class="k8s-condition-row" v-for="(_val, key) in pod.labels" :key="key">
                   <span class="k8s-condition-name">{{ key }}</span>
                   <span class="k8s-condition-status">—</span>
                 </div>
