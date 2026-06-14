@@ -8,6 +8,85 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] — Final QA Gate & Carry-over Remediation — 2026-06-14
+
+### Status: ✅ RELEASED — v1.3.0 tag created and pushed (T-095 + T-096)
+
+### Added — v1.3.0 Sprints 21–23
+
+- T-086 — `compose.yml` detection (4 variants) in `src-tauri/src/commands/compose.rs:401`
+  `COMPOSE_FILES = ["docker-compose.yml", "docker-compose.yaml", "compose.yaml", "compose.yml"]`.
+- T-087 — Monaco editor lazy-load in `src/views/compose/ComposeEditor.vue:53`
+  (`await import('monaco-editor')` inside `setTimeout` in `onMounted`); bundle separated
+  as `monaco-BFuDFebU.js` (~4.0 MB lazy chunk).
+- T-088 — Binary size optimization 31 MB → **15 MB** via `Cargo.toml` release profile
+  (`lto = true`, `strip = true`, `panic = "abort"`).
+- T-089 — Vite `manualChunks()` strategy in `vite.config.ts` producing
+  `vendor-BSFeXGTX.js` (75 K) + `charts-Dzf5cWKZ.js` (165 K).
+- T-090 — Auto-updater wired via `tauri-plugin-updater = "2"` (`Cargo.toml:26`,
+  `lib.rs:59`, `tauri.conf.json:53`).
+- T-091 — P2 bug fixes (per commit `23f42ba`).
+- T-092 — Customizable keyboard shortcuts in `src/composables/useKeyboardShortcuts.ts`
+  with async `loadShortcuts` / `saveShortcut` API.
+- T-093 — Settings export/import (per commit `23f42ba`).
+- T-094 — AppImage packaging documentation in `docs/appimage_setup.md`.
+
+### Fixed
+- T-096: 6 pre-existing E2E failures resolved (Sprints 16, 18, 19 carry-overs)
+  - `e2e/dashboard.spec.ts:146` — Container Detail (8 tabs, stats polling) — Sprint 16
+  - `e2e/interactions.spec.ts:228` — Container Start via context menu — Sprint 16
+  - `e2e/interactions.spec.ts:300` — Container Stop via context menu — Sprint 16
+  - `e2e/interactions.spec.ts:352` — Container Remove via context menu — Sprint 16
+  - `e2e/kubernetes.spec.ts:141` — Secret redaction toggle — Sprint 18
+  - `e2e/swarm.spec.ts:29` — Inactive state Init and Join CTAs — Sprint 19
+  - Self-healing contract archived in `tests/test_failures.json` (`status: "resolved"`,
+    `blocking: false`).
+- T-092 regression — Vitest `useKeyboardShortcuts.spec.ts:47` race condition
+  (added `await flushPromises()` after `mount(TestComponent)` and made the test
+  async). Vitest suite now **74/74** passing across 17 files.
+
+### Test Gates — final state at v1.3.0 cut
+
+| Gate | Result |
+|---|---|
+| `pnpm test` (Vitest) | ✅ 74/74 passing (17 files) |
+| `npx vue-tsc -b` | ✅ 0 errors (strict mode) |
+| `npx playwright test --list` | ✅ 102 scenarios in 14 spec files |
+| `npm audit --production` | ✅ 0 vulnerabilities |
+| `cargo test` | ✅ 153/153 passing |
+| `cargo clippy -- -D warnings` | ✅ 0 warnings |
+| Release binary size | ✅ 15 MB (target: 31→15 MB) |
+
+### Known Issues (release-blockers)
+- **0** known release-blocker issues at v1.3.0 cut. The 6 carry-over E2E failures
+  from Sprints 16/18/19 were resolved under T-096 and re-validated from step zero
+  per the §0.6 reset rule.
+
+### Security
+- `npm audit --production`: 0 vulnerabilities.
+- `cargo audit`: 0 CVEs (598 crates; 18 allowed warnings — gtk3-rs unmaintained +
+  glib unsound, non-exploitable).
+
+---
+
+## [1.2.0] — Kubernetes, Swarm, Backup, Polish, Metrics — 2026-06-14
+
+### Status: ✅ RELEASED (v1.2.0)
+
+### Added — v1.2.0 Sprints 18–22
+
+- Sprint 18 — Kubernetes Cluster Viewer (read-only, T-068)
+- Sprint 19 — Docker Swarm Mode (T-071)
+- Sprint 20 — Backup & Restore via tar (T-074)
+- Sprint 21 — UI/UX Polish (page transitions, skeletons, counters, T-077)
+- Sprint 22 — Historical Metrics Charts (3-tier SQLite time-series, T-080)
+
+### Known Issues (post-release carry-overs into v1.3.0)
+- 6 E2E carry-over failures (Sprints 16, 18, 19) tracked under **T-096** in v1.3.0
+  and resolved there. See CHANGELOG v1.3.0 → `### Fixed` for the per-spec resolution.
+
+---
+
 ## [1.1.0] — Phase 3 — Polish, Testing & Monaco — 2026-06-13
 
 ### Status: ⚠️ RELEASED-INTERNALLY (Release BLOCKED by QA gate, 2 of 8 gates failing)
