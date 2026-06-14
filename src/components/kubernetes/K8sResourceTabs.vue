@@ -68,7 +68,7 @@ const emit = defineEmits<{
       >
         <i class="fa-solid fa-file-lines"></i>
         Config
-        <span v-if="configmaps.length + secrets.length > 0" class="k8s-tab-badge">{{ configmaps.length + secrets.length }}</span>
+        <span v-if="(configmaps?.length ?? 0) + (secrets?.length ?? 0) > 0" class="k8s-tab-badge">{{ (configmaps?.length ?? 0) + (secrets?.length ?? 0) }}</span>
       </button>
     </div>
 

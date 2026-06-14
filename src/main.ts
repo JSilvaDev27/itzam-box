@@ -102,6 +102,11 @@ export const router = createRouter({
 const app = createApp(App)
 app.use(router)
 
+// Global error handler to prevent unhandled exceptions from crashing component rendering
+app.config.errorHandler = (err) => {
+  console.warn('[App] Vue error:', err)
+}
+
 // Register v-click-outside directive (used by K8sToolbar)
 app.directive('click-outside', {
   mounted(el: HTMLElement, binding: any) {

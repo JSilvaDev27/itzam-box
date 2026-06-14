@@ -24,10 +24,10 @@ export async function mockV12Responses(page: Page) {
       hostMetricsRange.push({
         timestamp: now - i * 60,
         cpu_percent: 15 + Math.sin(i / 5) * 8 + Math.random() * 5,
-        ram_used_bytes: 4_000_000_000 + Math.random() * 1_000_000_000,
-        ram_total_bytes: 16_000_000_000,
-        net_rx_bytes: Math.floor(Math.random() * 1_000_000),
-        net_tx_bytes: Math.floor(Math.random() * 500_000),
+        memory_used_bytes: 4_000_000_000 + Math.random() * 1_000_000_000,
+        memory_total_bytes: 16_000_000_000,
+        network_rx_bytes: Math.floor(Math.random() * 1_000_000),
+        network_tx_bytes: Math.floor(Math.random() * 500_000),
         disk_read_bytes: Math.floor(Math.random() * 2_000_000),
         disk_write_bytes: Math.floor(Math.random() * 1_000_000),
       })

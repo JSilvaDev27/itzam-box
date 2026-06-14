@@ -28,27 +28,17 @@ const {
 // ── Deep-linking: read route params on mount ──
 onMounted(async () => {
   await initialize()
-
+  
   // Deep-link: namespace pre-select
   const nsParam = route.params.ns as string | undefined
   if (nsParam && connectionStatus.value === 'connected') {
     await switchNamespace(nsParam)
   }
 
-  // Deep-link: resource inspector (namespace optional — falls back to active or 'default')
-  const resourceParam = route.params.resource as string | undefined
-  const nameParam = route.params.name as string | undefined
-  if (resourceParam && nameParam) {
-    const kind = resourceParam as 'pod' | 'deployment' | 'service' | 'configmap' | 'secret'
-    if (['pod', 'deployment', 'service', 'configmap', 'secret'].includes(kind)) {
-      const targetNs = nsParam || activeNamespace.value || 'default'
-      await openInspector(kind, nameParam, targetNs)
-    }
-  }
 })
 
-// ── Watch route changes for deep-linking ──
-watch(() => route.params, async (params) => {
+// ── Watch route changes for deep-linking (immediate to handle initial mount) ──
+watch(() => ({ ...route.params }), async (params) => {
   const nsParam = params.ns as string | undefined
   if (nsParam && nsParam !== activeNamespace.value) {
     await switchNamespace(nsParam)
@@ -56,13 +46,15 @@ watch(() => route.params, async (params) => {
 
   const resourceParam = params.resource as string | undefined
   const nameParam = params.name as string | undefined
-  if (resourceParam && nameParam && nsParam) {
+  if (resourceParam && nameParam) {
     const kind = resourceParam as 'pod' | 'deployment' | 'service' | 'configmap' | 'secret'
     if (['pod', 'deployment', 'service', 'configmap', 'secret'].includes(kind)) {
-      await openInspector(kind, nameParam, nsParam)
+      const targetNs = nsParam || activeNamespace.value || 'default'
+      console.warn('[K8sView] watch opening inspector', kind, nameParam, 'ns:', targetNs)
+      await openInspector(kind, nameParam, targetNs)
     }
   }
-})
+}, { immediate: true, deep: true })
 
 // ── Tab switching (preserved on namespace switch per US-21) ──
 function onSwitchTab(tab: string) {

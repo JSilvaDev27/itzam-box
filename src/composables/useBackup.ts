@@ -74,18 +74,21 @@ export function useBackup() {
 
   async function listenBackupProgress(): Promise<void> {
     if (unlistenProgress) return
-    unlistenProgress = await listen<BackupProgress>('backup-progress', (event) => {
-      const p = event.payload
-      activeProgress.value = p
-      if (p.status === 'completed' || p.status === 'failed') {
-        // Auto-clear after 3 seconds on completion
-        setTimeout(() => {
-          if (activeProgress.value?.job_id === p.job_id) {
-            activeProgress.value = null
-          }
-        }, 3000)
-      }
-    })
+    try {
+      unlistenProgress = await listen<BackupProgress>('backup-progress', (event) => {
+        const p = event.payload
+        activeProgress.value = p
+        if (p.status === 'completed' || p.status === 'failed') {
+          setTimeout(() => {
+            if (activeProgress.value?.job_id === p.job_id) {
+              activeProgress.value = null
+            }
+          }, 3000)
+        }
+      })
+    } catch (e: any) {
+      console.warn('[Backup] listen failed, proceeding without progress listener:', e?.toString?.() ?? e)
+    }
   }
 
   function stopListeningProgress(): void {

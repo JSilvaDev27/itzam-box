@@ -61,14 +61,17 @@ function tabKey(label: string): string {
 }
 
 function setActiveTab(tab: string) {
-  activeInspectorTab.value = tabKey(tab)
+  const key = tabKey(tab)
+  console.warn('[Inspector] setActiveTab called:', tab, '->', key)
+  activeInspectorTab.value = key
 }
 
-function statusClass(status: string): string {
-  const s = status.toLowerCase()
+function statusClass(status: string | null | undefined): string {
+  const s = (status ?? '').toLowerCase()
   if (s === 'running') return 'k8s-pill--running'
-  if (s.includes('crash') || s === 'error' || s === 'failed') return 'k8s-pill--error'
+  if (s === 'error' || s === 'failed') return 'k8s-pill--error'
   if (s === 'pending') return 'k8s-pill--pending'
+  if (s.includes('crash')) return 'k8s-pill--error'
   return 'k8s-pill--default'
 }
 </script>

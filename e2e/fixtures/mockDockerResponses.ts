@@ -269,6 +269,34 @@ export async function mockDockerResponses(page: Page) {
           }
         }
 
+        // ── Tauri event plugin: used by @tauri-apps/api/event listen() ──
+        if (cmd === 'plugin:event|listen') {
+          // For backup-progress events, fire a mock progress payload
+          if (args?.event === 'backup-progress') {
+            const handlerId = args?.handler
+            if (handlerId !== undefined && window.__tauri_callbacks__?.[handlerId]) {
+              setTimeout(() => {
+                window.__tauri_callbacks__[handlerId]({
+                  payload: {
+                    job_id: 'job-1',
+                    snapshot_name: 'postgres_data_2026-06-14T10-30-00.tar.gz',
+                    bytes_processed: 600_000_000,
+                    bytes_total: 1_200_000_000,
+                    elapsed_seconds: 30,
+                    percent: 50,
+                    status: 'in_progress',
+                    message: 'Snapshotting postgres_data',
+                  },
+                })
+              }, 1000)
+            }
+          }
+          return 42
+        }
+        if (cmd === 'plugin:event|unlisten') {
+          return null
+        }
+
         // ── v1.2.0: Backup & Restore commands ──
         if (cmd === 'list_backups') {
           console.log('[MOCK] list_backups called, returning 12 records');
@@ -435,6 +463,9 @@ export async function mockDockerResponses(page: Page) {
     // Set up globals
     window.__tauriMockOverrides = window.__tauriMockOverrides || {}
     window.__TAURI__ = mockTauri as any
+    window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
+      unregisterListener: () => {},
+    }
     window.__TAURI_INTERNALS__ = {
       ...mockTauri,
       transformCallback: (callback: any, once: boolean) => {
