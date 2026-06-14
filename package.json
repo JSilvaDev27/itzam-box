@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "tauri:build": "npx tauri build",
+    "build:appimage": "npx tauri build && bash scripts/fix-appimage-webkit.sh",
     "tauri:dev": "npx tauri dev"
   },
   "dependencies": {
