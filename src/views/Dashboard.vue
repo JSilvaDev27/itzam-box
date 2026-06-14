@@ -99,7 +99,7 @@ function getContainerCallbacks(c: typeof containers.value[0]) {
     onLogs: () => { router.push('/containers/' + c.id + '?tab=logs') },
     onTerminal: () => { router.push('/containers/' + c.id + '?tab=terminal') },
     onInspect: () => { router.push('/containers/' + c.id + '?tab=info') },
-    onFiles: () => { router.push('/containers/' + c.id + '?tab=files') },
+    onFiles: () => { router.push('/containers/' + c.id + '/files') },
     onRemove: async () => {
       if (!confirm(`Remove container "${c.name}"? This action cannot be undone.`)) return
       try { await removeContainer(c.id, true); success('Container removed', `${c.name} has been removed.`); await refreshAll() }

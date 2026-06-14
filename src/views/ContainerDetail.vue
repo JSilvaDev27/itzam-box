@@ -12,6 +12,12 @@ const route = useRoute()
 const router = useRouter()
 const containerId = computed(() => route.params.id as string)
 const envFilter = ref('')
+
+// Read initial tab from query param (e.g., ?tab=logs, ?tab=info)
+const initialTab = (route.query.tab as string) || 'info'
+const validTabs = ['info', 'env', 'volumes', 'network', 'health', 'labels', 'logs', 'stats'] as const
+type ValidTab = typeof validTabs[number]
+const activeTab = ref<ValidTab>(validTabs.includes(initialTab as ValidTab) ? (initialTab as ValidTab) : 'info')
 const {
   getContainerLogs, getContainerStats, inspectContainer,
   startContainer, stopContainer, restartContainer, pauseContainer, unpauseContainer, removeContainer,
@@ -21,7 +27,6 @@ const {
 const inspectData = ref<Record<string, any> | null>(null)
 const loading = ref(true)
 const error = ref<string | null>(null)
-const activeTab = ref<'info' | 'env' | 'volumes' | 'network' | 'health' | 'labels' | 'logs' | 'stats'>('info')
 const actionLoading = ref<string | null>(null)
 
 // ─── Logs state ───

@@ -1,7 +1,7 @@
 <!-- ItzamBox — Root Application Shell
      Copyright (C) 2026 SodigTech — GPL-3.0 -->
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { invoke } from '@tauri-apps/api/core'
 import TerminalPanel from './components/terminal/TerminalPanel.vue'
@@ -13,7 +13,7 @@ import { useTheme } from './composables/useTheme'
 import { useI18n } from './composables/useI18n'
 import { useNotifications } from './composables/useNotifications'
 import { useKeyboardShortcuts } from './composables/useKeyboardShortcuts'
-import { relativeTime } from './composables/useDocker'
+import { useDocker, relativeTime } from './composables/useDocker'
 
 const router = useRouter()
 const { isDark, init: initTheme, toggleTheme } = useTheme()
@@ -33,12 +33,33 @@ const sidebarCollapsed = ref(false)
 const showOnboarding = ref(false)
 const showNotificationsPanel = ref(false)
 
+const { hostMetrics } = useDocker()
+const memPct = computed(() => {
+  if (!hostMetrics.value?.memory_total_bytes) return 0
+  return (hostMetrics.value.memory_used_bytes / hostMetrics.value.memory_total_bytes) * 100
+})
+const memPctDisplay = computed(() => {
+  if (!hostMetrics.value?.memory_total_bytes) return '--'
+  return memPct.value.toFixed(1) + '%'
+})
 useKeyboardShortcuts()
+
+// Periodically refresh host metrics for sidebar indicators
+let metricsInterval: number | undefined
 
 onMounted(async () => {
   await initTheme()
   await initI18n()
   await loadNotifications()
+  metricsInterval = window.setInterval(() => {
+    invoke('get_host_metrics').then((m: any) => {
+      hostMetrics.value = m
+    }).catch(() => {})
+  }, 5000)
+
+  onUnmounted(() => {
+    if (metricsInterval) clearInterval(metricsInterval)
+  })
 
   // Check if onboarding has been completed
   try {
@@ -207,13 +228,17 @@ const sidebarGroups = [
         <div class="sidebar-widgets">
           <div class="host-widget">
             <div class="host-widget-label">CPU</div>
-            <div class="host-widget-value" style="color:var(--accent-green)">--</div>
-            <div class="host-widget-bar"><div class="host-widget-bar-fill" style="width:0%"></div></div>
+            <div class="host-widget-value" :style="{ color: (hostMetrics?.cpu_usage_percent ?? 0) > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }">
+              {{ hostMetrics?.cpu_usage_percent != null ? (hostMetrics.cpu_usage_percent.toFixed(1) + '%') : '--' }}
+            </div>
+            <div class="host-widget-bar"><div class="host-widget-bar-fill" :style="{ width: Math.min(hostMetrics?.cpu_usage_percent ?? 0, 100) + '%', background: (hostMetrics?.cpu_usage_percent ?? 0) > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }"></div></div>
           </div>
           <div class="host-widget">
             <div class="host-widget-label">RAM</div>
-            <div class="host-widget-value" style="color:var(--accent-green)">--</div>
-            <div class="host-widget-bar"><div class="host-widget-bar-fill" style="width:0%"></div></div>
+            <div class="host-widget-value" :style="{ color: (memPct) > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }">
+              {{ memPctDisplay }}
+            </div>
+            <div class="host-widget-bar"><div class="host-widget-bar-fill" :style="{ width: Math.min(memPct, 100) + '%', background: memPct > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }"></div></div>
           </div>
         </div>
       </aside>

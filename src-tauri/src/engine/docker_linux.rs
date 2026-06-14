@@ -325,6 +325,18 @@ impl ContainerEngine for DockerLinuxEngine {
                 continue;
             }
             if let Ok(raw) = serde_json::from_str::<serde_json::Value>(line) {
+                // Labels come as a flat string: "key1=val1,key2=val2,..."
+                let labels: std::collections::HashMap<String, String> = raw
+                    .get("Labels")
+                    .and_then(|v| v.as_str())
+                    .map(parse_flat_labels)
+                    .unwrap_or_default();
+
+                let compose_project =
+                    labels.get("com.docker.compose.project").cloned();
+                let compose_service =
+                    labels.get("com.docker.compose.service").cloned();
+
                 containers.push(ContainerInfo {
                     id: raw_get(&raw, "ID"),
                     name: raw_get(&raw, "Names"),
@@ -341,13 +353,9 @@ impl ContainerEngine for DockerLinuxEngine {
                     restart_count: 0,
                     created_at: raw_get(&raw, "CreatedAt").parse().unwrap_or(0),
                     started_at: None,
-                    labels: std::collections::HashMap::new(),
-                    compose_project: raw
-                        .get("Labels")
-                        .and_then(|l| l.get("com.docker.compose.project"))
-                        .and_then(|v| v.as_str())
-                        .map(String::from),
-                    compose_service: None,
+                    labels,
+                    compose_project,
+                    compose_service,
                 });
             }
         }
@@ -1288,6 +1296,23 @@ fn raw_get(val: &serde_json::Value, key: &str) -> String {
     val.get(key)
         .map(|v| v.as_str().unwrap_or("").to_string())
         .unwrap_or_default()
+}
+
+/// Parse a flat comma-separated label string from `docker ps --format '{{json .}}'`.
+///
+/// Docker CLI template output serialises the Labels map as:
+/// ```text
+/// "com.docker.compose.project=myapp,com.docker.compose.service=web,maintainer=..."
+/// ```
+/// This function splits on `,` and then on the first `=` to reconstruct a HashMap.
+fn parse_flat_labels(label_str: &str) -> std::collections::HashMap<String, String> {
+    let mut labels = std::collections::HashMap::new();
+    for part in label_str.split(',') {
+        if let Some((key, value)) = part.split_once('=') {
+            labels.insert(key.trim().to_string(), value.trim().to_string());
+        }
+    }
+    labels
 }
 
 /// Parse a human-readable size string like "1.5GB", "500MB", "1KB", "1234".

@@ -471,10 +471,107 @@ fn resolve_compose_file(project_path: &str) -> Result<String, String> {
     ))
 }
 
+// ─── Running Compose Projects via `docker compose ls` ──────────────────────
+
+/// Query the Docker daemon for running Compose projects via `docker compose ls`.
+/// This detects projects regardless of where the compose file lives on the
+/// filesystem, complementing the filesystem-based scan.
+fn detect_running_compose_projects() -> Vec<ComposeProject> {
+    let output = if compose_is_plugin() {
+        let out = Command::new("docker")
+            .args(["compose", "ls", "--format", "json"])
+            .output();
+        out.map(|o| {
+            if o.status.success() {
+                Some(String::from_utf8_lossy(&o.stdout).to_string())
+            } else {
+                None
+            }
+        })
+        .unwrap_or(None)
+    } else if compose_is_standalone() {
+        // docker-compose does not support `ls` — only docker compose plugin does.
+        None
+    } else {
+        None
+    };
+
+    let Some(json_str) = output else {
+        return Vec::new();
+    };
+    if json_str.trim().is_empty() {
+        return Vec::new();
+    }
+
+    let mut projects: Vec<ComposeProject> = Vec::new();
+
+    // `docker compose ls --format json` outputs a JSON array of objects.
+    if let Ok(list) = serde_json::from_str::<Vec<serde_json::Value>>(&json_str) {
+        for entry in list {
+            let name = entry
+                .get("Name")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            let config_files = entry
+                .get("ConfigFiles")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+
+            if name.is_empty() {
+                continue;
+            }
+
+            // The ConfigFiles field contains the path to the compose file.
+            // We use the directory of that file as the project path.
+            let (path, file) = if !config_files.is_empty() {
+                let cf_path = Path::new(&config_files);
+                let dir = cf_path.parent().unwrap_or(cf_path);
+                let fname = cf_path
+                    .file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "compose.yml".to_string());
+                (dir.to_string_lossy().to_string(), fname)
+            } else {
+                (String::new(), String::new())
+            };
+
+            // Try to extract service names from the compose file.
+            let services = if !config_files.is_empty() {
+                if let Ok(content) = std::fs::read_to_string(&config_files) {
+                    let info = parse_compose_yaml(&content);
+                    info.services.into_iter().map(|s| s.name).collect()
+                } else {
+                    Vec::new()
+                }
+            } else {
+                Vec::new()
+            };
+
+            projects.push(ComposeProject {
+                name,
+                path,
+                file,
+                services,
+            });
+        }
+    }
+
+    projects
+}
+
 // ─── Tauri Commands ────────────────────────────────────────────────────────
 
-/// Detect Docker Compose projects by searching for compose files
-/// in the given directory (defaults to $HOME) up to 2 levels deep.
+/// Detect Docker Compose projects by:
+/// 1. Scanning the filesystem for compose files in the given directory
+///    (defaults to `$HOME`, up to 2 levels deep).
+/// 2. Querying the Docker daemon for running Compose projects via
+///    `docker compose ls`.
+///
+/// Results are merged — running projects that are also found on the
+/// filesystem are deduplicated (preferring the filesystem entry which has
+/// richer service metadata).
 #[tauri::command]
 pub async fn detect_compose_projects(dir: Option<String>) -> Result<Vec<ComposeProject>, String> {
     let base = dir.map(PathBuf::from).unwrap_or_else(|| {
@@ -482,9 +579,10 @@ pub async fn detect_compose_projects(dir: Option<String>) -> Result<Vec<ComposeP
         PathBuf::from(home)
     });
 
+    // 1. Filesystem scan
     let found = scan_for_compose(&base, 2);
 
-    let projects: Vec<ComposeProject> = found
+    let mut fs_projects: Vec<ComposeProject> = found
         .into_iter()
         .map(|(path, file, services)| {
             let name = path
@@ -500,7 +598,18 @@ pub async fn detect_compose_projects(dir: Option<String>) -> Result<Vec<ComposeP
         })
         .collect();
 
-    Ok(projects)
+    // 2. Running compose projects (from Docker daemon)
+    let running = detect_running_compose_projects();
+
+    // Merge: add running projects not already found on the filesystem.
+    for rp in running {
+        let already_present = fs_projects.iter().any(|fp| fp.name == rp.name);
+        if !already_present {
+            fs_projects.push(rp);
+        }
+    }
+
+    Ok(fs_projects)
 }
 
 /// Parse a docker-compose.yml / compose.yaml file and return its structure.
