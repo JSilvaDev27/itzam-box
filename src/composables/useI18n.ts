@@ -1,7 +1,7 @@
 // ItzamBox — Internationalization (i18n) Composable
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 
 type Locale = 'es' | 'en'

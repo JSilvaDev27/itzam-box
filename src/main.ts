@@ -6,6 +6,7 @@
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import App from './App.vue'
+import { initSentry } from './lib/sentry'
 
 /* ─── Styles (order matters: tokens → layout → components → pages) ─── */
 import './styles/theme.css'
@@ -42,11 +43,15 @@ const routes = [
   { path: '/image-scanner', name: 'ImageScanner', component: () => import('./views/ImageScanner.vue') },
 ]
 
-const router = createRouter({
+export const router = createRouter({
   history: createWebHistory(),
   routes,
 })
 
 const app = createApp(App)
 app.use(router)
+
+// Initialize Sentry error tracking (production only, requires VITE_SENTRY_DSN)
+initSentry(app, router)
+
 app.mount('#app')
