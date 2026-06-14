@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "tauri:build": "npx tauri build",
+    "tauri:dev": "npx tauri dev"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
