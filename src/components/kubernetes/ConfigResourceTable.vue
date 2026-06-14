@@ -5,7 +5,7 @@ import { ref, computed } from 'vue'
 import type { K8sConfigMap, K8sSecretMeta } from '../../composables/useKubernetes'
 import SecretValueMask from './SecretValueMask.vue'
 
-defineProps<{
+const props = defineProps<{
   configmaps: K8sConfigMap[]
   secrets: K8sSecretMeta[]
   loading: boolean
@@ -22,7 +22,7 @@ const filterQuery = ref('')
 const expandedCms = ref<Set<string>>(new Set())
 
 const filteredConfigMaps = computed(() => {
-  let list = [...configmaps.value]
+  let list = [...props.configmaps]
   if (filterQuery.value) {
     const q = filterQuery.value.toLowerCase()
     list = list.filter(cm => cm.name.toLowerCase().includes(q) || cm.namespace.toLowerCase().includes(q))
@@ -31,7 +31,7 @@ const filteredConfigMaps = computed(() => {
 })
 
 const filteredSecrets = computed(() => {
-  let list = [...secrets.value]
+  let list = [...props.secrets]
   if (filterQuery.value) {
     const q = filterQuery.value.toLowerCase()
     list = list.filter(s => s.name.toLowerCase().includes(q) || s.namespace.toLowerCase().includes(q))

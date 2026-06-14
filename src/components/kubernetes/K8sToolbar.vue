@@ -143,14 +143,6 @@ if (typeof window !== 'undefined') {
         </div>
         <div class="k8s-dropdown-list">
           <button
-            class="k8s-dropdown-item"
-            :class="{ active: activeNamespace === null }"
-            @click="selectNamespace(null)"
-          >
-            <i class="fa-solid fa-globe"></i>
-            <span class="k8s-dropdown-item-name">All Namespaces</span>
-          </button>
-          <button
             v-for="ns in filteredNamespaces"
             :key="ns"
             class="k8s-dropdown-item"
@@ -159,6 +151,14 @@ if (typeof window !== 'undefined') {
           >
             <i class="fa-solid fa-cube"></i>
             <span class="k8s-dropdown-item-name">{{ ns }}</span>
+          </button>
+          <button
+            class="k8s-dropdown-item"
+            :class="{ active: activeNamespace === null }"
+            @click="selectNamespace(null)"
+          >
+            <i class="fa-solid fa-globe"></i>
+            <span class="k8s-dropdown-item-name">All Namespaces</span>
           </button>
           <div v-if="filteredNamespaces.length === 0" class="k8s-dropdown-empty">No namespaces found</div>
         </div>

@@ -172,7 +172,7 @@ test.describe('Sprint 20: Backup & Restore E2E (T-074)', () => {
     await expect(containerWarning).toBeVisible()
 
     // Action mode radio (Stop & Restore / Cancel)
-    await expect(modal.locator('text=Stop & Restore')).toBeVisible()
+    await expect(modal.locator('button:has-text("Stop & Restore")')).toBeVisible()
     await expect(modal.locator('.radio-option', { hasText: 'Cancel' })).toBeVisible()
 
     // The Restore button is in the footer

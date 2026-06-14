@@ -35,13 +35,14 @@ onMounted(async () => {
     await switchNamespace(nsParam)
   }
 
-  // Deep-link: resource inspector
+  // Deep-link: resource inspector (namespace optional — falls back to active or 'default')
   const resourceParam = route.params.resource as string | undefined
   const nameParam = route.params.name as string | undefined
-  if (resourceParam && nameParam && nsParam) {
+  if (resourceParam && nameParam) {
     const kind = resourceParam as 'pod' | 'deployment' | 'service' | 'configmap' | 'secret'
     if (['pod', 'deployment', 'service', 'configmap', 'secret'].includes(kind)) {
-      await openInspector(kind, nameParam, nsParam)
+      const targetNs = nsParam || activeNamespace.value || 'default'
+      await openInspector(kind, nameParam, targetNs)
     }
   }
 })

@@ -28,22 +28,6 @@ const emit = defineEmits<{
   'inspect-secret': [secret: K8sSecretMeta]
 }>()
 
-function resourceCount(tab: string): number {
-  switch (tab) {
-    case 'pods': return pods.length
-    case 'deployments': return deployments.length
-    case 'services': return services.length
-    case 'config': return configmaps.length + secrets.length
-    default: return 0
-  }
-}
-
-// Declared for resourceCount access
-const pods: K8sPod[] = []
-const deployments: K8sDeployment[] = []
-const services: K8sService[] = []
-const configmaps: K8sConfigMap[] = []
-const secrets: K8sSecretMeta[] = []
 </script>
 
 <template>

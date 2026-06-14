@@ -85,7 +85,7 @@ function copyToken(token: string) {
 
 <template>
   <div
-    class="modal-backdrop"
+    class="modal-backdrop swarm-modal"
     role="dialog"
     aria-modal="true"
     aria-label="Initialize Swarm"

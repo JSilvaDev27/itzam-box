@@ -35,16 +35,16 @@ export async function mockV12Responses(page: Page) {
 
     // ── Kubernetes ──
     const kubectlDetected = {
-      available: true,
-      version: 'v1.28.4',
-      kubeconfig_path: '/home/user/.kube/config',
-      kubeconfig_valid: true,
+      kubectl_installed: true,
+      kubectl_version: 'v1.28.4',
+      kubeconfig_exists: true,
+      active_context: 'minikube',
     }
     const kubectlMissing = {
-      available: false,
-      version: null,
-      kubeconfig_path: null,
-      kubeconfig_valid: false,
+      kubectl_installed: false,
+      kubectl_version: null,
+      kubeconfig_exists: false,
+      active_context: null,
     }
 
     const k8sContexts = [
@@ -52,7 +52,7 @@ export async function mockV12Responses(page: Page) {
       { name: 'prod-cluster', cluster: 'prod-us-east-1', user: 'admin', is_active: false },
       { name: 'staging', cluster: 'staging-eu-west-1', user: 'developer', is_active: false },
     ]
-    const k8sNamespaces = ['default', 'kube-system', 'kube-public', 'monitoring', 'app-prod', 'app-staging']
+    const k8sNamespaces = ['default', 'kube-public', 'kube-system', 'monitoring', 'observability', 'staging']
     const k8sPods = [
       {
         name: 'nginx-7c8d9f-abc12',
@@ -152,34 +152,23 @@ status:
       oldest_backup_at: now - 7 * 24 * 3600,
       active_jobs_count: 2,
     }
-    const backupSnapshots = [
-      {
-        id: 1,
-        job_id: 1,
-        name: 'postgres_data_2026-06-14T09-00-00.tar.gz',
-        source_volume: 'postgres_data',
-        destination_path: '/var/backups/itzambox/',
-        size_bytes: 1_200_000_000,
-        sha256: 'a1b2c3d4e5f6789012345678901234567890abcdef0123456789abcdef012345',
-        status: 'completed',
-        failure_reason: null,
-        duration_seconds: 45,
-        created_at: now - 3600,
-      },
-      {
-        id: 2,
-        job_id: null,
-        name: 'redis_cache_2026-06-14T08-30-00.tar.gz',
-        source_volume: 'redis_cache',
-        destination_path: '/var/backups/itzambox/',
-        size_bytes: 256_000_000,
-        sha256: 'b2c3d4e5f6789012345678901234567890abcdef0123456789abcdef012345a',
-        status: 'completed',
-        failure_reason: null,
-        duration_seconds: 12,
-        created_at: now - 7200,
-      },
-    ]
+    const backupSnapshots = (() => {
+      const base = [
+        { id: 1, job_id: 1, name: 'postgres_data_2026-06-14T09-00-00.tar.gz', source_volume: 'postgres_data', destination_path: '/var/backups/itzambox/', size_bytes: 1_200_000_000, sha256: 'a1b2c3d4e5f6', status: 'completed', failure_reason: null, duration_seconds: 45, created_at: now - 3600 },
+        { id: 2, job_id: null, name: 'redis_cache_2026-06-14T08-30-00.tar.gz', source_volume: 'redis_cache', destination_path: '/var/backups/itzambox/', size_bytes: 256_000_000, sha256: 'b2c3d4e5f678', status: 'completed', failure_reason: null, duration_seconds: 12, created_at: now - 7200 },
+        { id: 3, job_id: null, name: 'app_configs_2026-06-14.tar.gz', source_volume: 'app_configs', destination_path: '/var/backups/itzambox/', size_bytes: 45_000_000, sha256: 'c3d4e5f67890', status: 'completed', failure_reason: null, duration_seconds: 5, created_at: now - 10800 },
+        { id: 4, job_id: 1, name: 'nightly_grafana_2026-06-13.tar.gz', source_volume: 'grafana_data', destination_path: '/var/backups/itzambox/', size_bytes: 1_180_000_000, sha256: 'd4e5f6789012', status: 'completed', failure_reason: null, duration_seconds: 85, created_at: now - 86400 },
+        { id: 5, job_id: 1, name: 'nightly_postgres_2026-06-13.tar.gz', source_volume: 'postgres_data', destination_path: '/var/backups/itzambox/', size_bytes: 2_050_000_000, sha256: 'e5f678901234', status: 'completed', failure_reason: null, duration_seconds: 140, created_at: now - 86400 },
+        { id: 6, job_id: null, name: 'redis_snapshot_2026-06-12.tar.gz', source_volume: 'redis_cache', destination_path: '/var/backups/itzambox/', size_bytes: 261_000_000, sha256: 'f67890123456', status: 'completed', failure_reason: null, duration_seconds: 22, created_at: now - 172800 },
+        { id: 7, job_id: null, name: 'pre_upgrade_all_volumes.tar.gz', source_volume: 'postgres_data', destination_path: '/var/backups/pre-upgrade/', size_bytes: 5_600_000_000, sha256: '789012345678', status: 'completed', failure_reason: null, duration_seconds: 300, created_at: now - 259200 },
+        { id: 8, job_id: null, name: 'weekly_full_2026-06-11.tar.gz', source_volume: 'app_configs', destination_path: '/var/backups/weekly/', size_bytes: 48_000_000, sha256: '890123456789', status: 'completed', failure_reason: null, duration_seconds: 7, created_at: now - 259200 },
+        { id: 9, job_id: 1, name: 'nightly_grafana_2026-06-11.tar.gz', source_volume: 'grafana_data', destination_path: '/var/backups/itzambox/', size_bytes: 1_150_000_000, sha256: '901234567890', status: 'completed', failure_reason: null, duration_seconds: 88, created_at: now - 345600 },
+        { id: 10, job_id: 1, name: 'nightly_postgres_2026-06-10.tar.gz', source_volume: 'postgres_data', destination_path: '/var/backups/itzambox/', size_bytes: 2_030_000_000, sha256: '012345678901', status: 'completed', failure_reason: null, duration_seconds: 138, created_at: now - 432000 },
+        { id: 11, job_id: null, name: 'adhoc_redis_backup.tar.gz', source_volume: 'redis_cache', destination_path: '/var/backups/itzambox/', size_bytes: 258_000_000, sha256: '123456789012', status: 'completed', failure_reason: null, duration_seconds: 20, created_at: now - 518400 },
+        { id: 12, job_id: null, name: 'scheduled_db_backup.tar.gz', source_volume: 'postgres_data', destination_path: '/var/backups/scheduled/', size_bytes: 2_080_000_000, sha256: '234567890123', status: 'completed', failure_reason: null, duration_seconds: 142, created_at: now - 604800 },
+      ]
+      return base
+    })()
     const backupJobs = [
       {
         id: 1,

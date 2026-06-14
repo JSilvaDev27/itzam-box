@@ -102,6 +102,23 @@ export const router = createRouter({
 const app = createApp(App)
 app.use(router)
 
+// Register v-click-outside directive (used by K8sToolbar)
+app.directive('click-outside', {
+  mounted(el: HTMLElement, binding: any) {
+    el.__clickOutsideHandler = (e: MouseEvent) => {
+      if (!el.contains(e.target as Node) && typeof binding.value === 'function') {
+        binding.value()
+      }
+    }
+    document.addEventListener('click', el.__clickOutsideHandler)
+  },
+  unmounted(el: HTMLElement) {
+    if (el.__clickOutsideHandler) {
+      document.removeEventListener('click', el.__clickOutsideHandler)
+    }
+  },
+})
+
 // Initialize Sentry error tracking (production only, requires VITE_SENTRY_DSN)
 initSentry(app, router)
 
