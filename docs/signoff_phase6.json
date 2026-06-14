@@ -1,0 +1,43 @@
+{
+  "task": "T-095",
+  "phase": 6,
+  "release_tag": "v1.3.0",
+  "verdict": "REJECTED",
+  "blocking": true,
+  "reasons": [
+    "Vitest suite: 1 of 74 tests failing (useKeyboardShortcuts.spec.ts:47) — race condition between sync test event and async onMounted loadShortcuts()."
+  ],
+  "tests": {
+    "vitest": { "passed": 73, "failed": 1, "total": 74, "verdict": "FAIL" },
+    "vue-tsc": { "errors": 0, "verdict": "PASS" },
+    "playwright_listed": 102,
+    "npm_audit_production": { "vulnerabilities": 0, "verdict": "PASS" },
+    "cargo_test": { "passed": 153, "failed": 0, "verdict": "PASS" },
+    "cargo_clippy": { "warnings": 0, "verdict": "PASS" },
+    "binary_size_mb": 15,
+    "binary_size_target_mb": 15,
+    "binary_size_verdict": "PASS"
+  },
+  "features_v1_3_0": {
+    "T-086_compose_yml_detection": "VERIFIED",
+    "T-087_monaco_lazy_load": "VERIFIED",
+    "T-088_binary_optimization_31_to_15_mb": "VERIFIED",
+    "T-089_vite_manual_chunks": "VERIFIED",
+    "T-090_auto_updater": "VERIFIED",
+    "T-091_bug_fixes_p2": "VERIFIED",
+    "T-092_keyboard_shortcuts_customization": "VERIFIED",
+    "T-093_settings_export_import": "VERIFIED",
+    "T-094_appimage_documentation": "VERIFIED"
+  },
+  "tag_created": false,
+  "tag_pushed": false,
+  "self_healing_contract": "tests/test_failures.json",
+  "qa_engineer": "@qa_engineer",
+  "timestamp": "2026-06-14T10:27:00Z",
+  "regate_procedure": [
+    "1. @dev_vue applies the remedy from tests/test_failures.json (add await flushPromises() after mount() in the spec).",
+    "2. @dev_vue re-runs pnpm test and confirms 74/74 pass.",
+    "3. @qa_engineer re-runs the full T-095 gate.",
+    "4. If green, @qa_engineer creates the v1.3.0 tag and pushes to origin, then updates this signoff to APPROVED."
+  ]
+}

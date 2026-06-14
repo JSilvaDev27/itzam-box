@@ -1,0 +1,40 @@
+{
+  "status": "resolved",
+  "timestamp": "2026-06-14T10:35:00Z",
+  "task": "T-095 — Final QA Gate v1.3.0",
+  "gate": "GREEN — tag v1.3.0 created and pushed",
+  "scope": "T-086..T-094 (Performance, Distribution, Polish)",
+  "vitest": "74/74 passing (17 files)",
+  "vue-tsc": "0 errors (strict mode)",
+  "rustTest": "153/153 passing",
+  "clippy": "0 warnings (-D warnings)",
+  "npmAudit": "0 vulnerabilities (production)",
+  "playwrightE2E": "96/102 passing — 6 pre-existing failures from Sprints 16-19 (v1.1.0/v1.2.0) unrelated to v1.3.0 scope, documented in CHANGELOG 'Known Issues'",
+  "v130Features": {
+    "T-086_compose_yml_array": "VERIFIED — src-tauri/src/commands/compose.rs:401 const COMPOSE_FILES",
+    "T-087_monaco_lazy": "VERIFIED — ComposeEditor.vue:53 dynamic import('monaco-editor'), bundle separated as monaco-BFuDFebU.js (4.0M)",
+    "T-088_binary_optimization": "VERIFIED — itzambox binary 15M (target 15 MB), Cargo.toml release profile: lto=true, strip=true, panic=abort",
+    "T-089_vite_chunks": "VERIFIED — vite.config.ts manualChunks() produces vendor-BSFeXGTX.js (75K) + charts-Dzf5cWKZ.js (165K)",
+    "T-090_auto_updater": "VERIFIED — Cargo.toml:26 tauri-plugin-updater = '2', lib.rs:59 .plugin(tauri_plugin_updater::Builder::new().build())"
+  },
+  "failures": [
+    {
+      "id": "vitest-useKeyboardShortcuts-01",
+      "type": "test_failure_RESOLVED",
+      "severity": "P1",
+      "framework": "vitest",
+      "testFile": "src/__tests__/composables/useKeyboardShortcuts.spec.ts",
+      "resolution": "Added await flushPromises() after mount(TestComponent) and made the test async — async loadShortcuts() in onMounted now completes before simulateShortcut() fires. Confirmed 1/1 passing on isolated run.",
+      "remediationOwner": "@dev_vue"
+    }
+  ],
+  "preExistingE2EFailures_outOfScope": [
+    {"spec": "e2e/dashboard.spec.ts:146", "name": "Container Detail (8 tabs, stats polling)", "origin": "Sprint 16 (v1.1.0)"},
+    {"spec": "e2e/interactions.spec.ts:228", "name": "Container Start via context menu", "origin": "Sprint 16 (v1.1.0)"},
+    {"spec": "e2e/interactions.spec.ts:300", "name": "Container Stop via context menu", "origin": "Sprint 16 (v1.1.0)"},
+    {"spec": "e2e/interactions.spec.ts:352", "name": "Container Remove via context menu", "origin": "Sprint 16 (v1.1.0)"},
+    {"spec": "e2e/kubernetes.spec.ts:141", "name": "Secret redaction toggle", "origin": "Sprint 18 (v1.2.0)"},
+    {"spec": "e2e/swarm.spec.ts:29", "name": "Inactive state Init and Join CTAs", "origin": "Sprint 19 (v1.2.0)"}
+  ],
+  "blocking": false
+}

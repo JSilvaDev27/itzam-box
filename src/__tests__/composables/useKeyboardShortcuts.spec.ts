@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { mount, flushPromises } from '@vue/test-utils'
 import { useKeyboardShortcuts } from '../../composables/useKeyboardShortcuts'
 import { useRouter } from 'vue-router'
 import { defineComponent } from 'vue'
@@ -19,7 +19,7 @@ describe('useKeyboardShortcuts composable', () => {
     } as any)
   })
 
-  it('should navigate to routes on shortcut key combinations', () => {
+  it('should navigate to routes on shortcut key combinations', async () => {
     // Create dummy component to consume useKeyboardShortcuts
     const TestComponent = defineComponent({
       setup() {
@@ -30,6 +30,7 @@ describe('useKeyboardShortcuts composable', () => {
     })
 
     const wrapper = mount(TestComponent)
+    await flushPromises()
 
     // Simulate Keyboard events
     const simulateShortcut = (key: string, ctrl = true) => {
