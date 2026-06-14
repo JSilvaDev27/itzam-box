@@ -60,6 +60,60 @@ else
     echo "[fix-appimage-webkit] ⚠️  WebKitNetworkProcess NOT accessible via lib/ symlink"
 fi
 
+# ── 2b. Create CWD-independent wrapper for direct binary execution ──────────
+# When the binary is run directly (not through AppRun which chdirs to AppDir root),
+# the CWD is whatever directory the user's shell is in. WebKit's hardcoded
+# relative path (././/lib/...) won't resolve. We install a wrapper that
+# chdirs to the AppDir root before execing the real binary.
+BINARY_PATH="$APPDIR/usr/bin/itzambox"
+BINARY_REAL="$APPDIR/usr/bin/itzambox.bin"
+
+if [ -f "$BINARY_PATH" ] && [ ! -f "$BINARY_REAL" ]; then
+    echo "[fix-appimage-webkit] 🔧 Installing CWD-independent wrapper for direct binary execution..."
+
+    # Rename the real binary
+    mv "$BINARY_PATH" "$BINARY_REAL"
+
+    # Create wrapper script
+    cat > "$BINARY_PATH" << 'WRAPPER'
+#!/usr/bin/env bash
+# =============================================================================
+# itzambox — CWD-independent wrapper for AppImage execution
+# =============================================================================
+# This wrapper ensures WebKit helper processes can be found regardless of
+# the current working directory. AppRun.wrapped chdirs to the AppDir root,
+# but when running the binary directly, the CWD may not be the AppDir root.
+#
+# The wrapper:
+#   1. Determines its own location (AppDir/usr/bin/)
+#   2. Changes CWD to the AppDir root (../.. relative to usr/bin/)
+#   3. Sets WEBKIT_EXEC_PATH to help WebKit find its helper processes
+#   4. Execs the real binary
+# =============================================================================
+set -euo pipefail
+
+# Resolve the AppDir root (two levels up from usr/bin/)
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+APPDIR_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Change to AppDir root so WebKit's relative paths resolve via lib → usr/lib
+cd "$APPDIR_ROOT"
+
+# Set WebKit env vars for runtime stability
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
+
+# Exec the real binary, preserving all arguments
+exec "$SCRIPT_DIR/itzambox.bin" "$@"
+WRAPPER
+    chmod +x "$BINARY_PATH"
+
+    echo "[fix-appimage-webkit] ✅ Installed wrapper: $BINARY_PATH"
+    echo "[fix-appimage-webkit] ✅ Real binary renamed to: $BINARY_REAL"
+    echo "[fix-appimage-webkit] ℹ️  Wrapper automatically chdirs to AppDir root before execution"
+elif [ -f "$BINARY_REAL" ]; then
+    echo "[fix-appimage-webkit] ℹ️  Wrapper already installed (itzambox.bin exists)"
+fi
+
 # ── 3. Create WebKit env var hook in apprun-hooks/ ───────────────────────────
 HOOKS_DIR="$APPDIR/apprun-hooks"
 mkdir -p "$HOOKS_DIR"
@@ -169,4 +223,8 @@ fi
 
 echo ""
 echo "[fix-appimage-webkit] ✅ All fixes applied successfully!"
+echo "    • Symlink:  $APPDIR/lib → usr/lib"
+echo "    • Hook:     apprun-hooks/61-webkit-env.sh"
+echo "    • Wrapper:  usr/bin/itzambox → chdir → itzambox.bin"
 echo "    Next build will also include these fixes permanently."
+echo "    (via GTK plugin patch in scripts/fix-linuxdeploy.sh)"
