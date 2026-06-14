@@ -22,6 +22,7 @@ pub struct AppState {
     pub engine: Arc<dyn ContainerEngine>,
     pub db: Arc<Mutex<rusqlite::Connection>>,
     pub db_path: PathBuf,
+    pub rt: tokio::runtime::Handle,
 }
 
 fn app_data_dir() -> PathBuf {
@@ -35,6 +36,9 @@ fn app_data_dir() -> PathBuf {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let rt = tokio::runtime::Runtime::new().expect("Failed to create Tokio runtime");
+    let rt_handle = rt.handle().clone();
+
     let db_path = app_data_dir().join("itzambox.db");
     let db_path_clone = db_path.clone();
     let db = setup_database(db_path).expect("Failed to initialize database");
@@ -45,6 +49,7 @@ pub fn run() {
         engine: Arc::new(engine),
         db: Arc::clone(&db_arc),
         db_path: db_path_clone,
+        rt: rt_handle.clone(),
     };
 
     tauri::Builder::default()
@@ -79,10 +84,11 @@ pub fn run() {
 
             // Seed built-in container templates on first run
             let state = app.state::<AppState>();
-            let rt =
-                tokio::runtime::Runtime::new().expect("Failed to create tokio runtime for seeding");
-            rt.block_on(async {
-                let needs_seed = match state.db.lock() {
+            let rt_handle = state.rt.clone();
+            let db_seed = Arc::clone(&state.db);
+            let app_handle = app.handle().clone();
+            rt_handle.block_on(async move {
+                let needs_seed = match db_seed.lock() {
                     Ok(db) => {
                         let count: i64 = db
                             .query_row(
@@ -99,7 +105,8 @@ pub fn run() {
                     }
                 };
                 if needs_seed {
-                    if let Err(e) = commands::templates::seed_builtin_templates(state).await {
+                    let seed_state = app_handle.state::<AppState>();
+                    if let Err(e) = commands::templates::seed_builtin_templates(seed_state).await {
                         log::error!("Failed to seed built-in templates: {}", e);
                     }
                 }
@@ -111,7 +118,8 @@ pub fn run() {
             let db_purge = Arc::clone(&db_arc);
 
             // 5-minute compaction: run every 5 minutes, compact raw data older than 24h.
-            tokio::spawn(async move {
+            let rt_h = state.rt.clone();
+            rt_h.spawn(async move {
                 let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
                 loop {
                     interval.tick().await;
@@ -134,7 +142,8 @@ pub fn run() {
             });
 
             // 30-minute compaction: run every 30 minutes, compact 5-min data older than 7d.
-            tokio::spawn(async move {
+            let rt_h2 = state.rt.clone();
+            rt_h2.spawn(async move {
                 let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1800));
                 loop {
                     interval.tick().await;
@@ -157,7 +166,8 @@ pub fn run() {
             });
 
             // Daily purge: run every 24 hours, delete data older than 30 days.
-            tokio::spawn(async move {
+            let rt_h3 = state.rt.clone();
+            rt_h3.spawn(async move {
                 let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86_400));
                 loop {
                     interval.tick().await;
@@ -180,7 +190,7 @@ pub fn run() {
             });
 
             // ─── Backup Scheduler ─────────────────────────────────────
-            commands::backup::spawn_backup_scheduler(Arc::clone(&db_arc));
+            commands::backup::spawn_backup_scheduler(Arc::clone(&db_arc), state.rt.clone());
 
             Ok(())
         })

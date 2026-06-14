@@ -660,8 +660,12 @@ pub async fn import_to_volume(
 /// - Executes due jobs in the background (respects semaphore)
 /// - Applies retention policy (deletes oldest snapshots beyond retention_count)
 /// - Logs execution results to backup_history
-pub fn spawn_backup_scheduler(db: std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>) {
-    tokio::spawn(async move {
+pub fn spawn_backup_scheduler(
+    db: std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>,
+    rt: tokio::runtime::Handle,
+) {
+    let rt_inner = rt.clone();
+    rt.spawn(async move {
         let mut interval = tokio::time::interval(std::time::Duration::from_secs(60));
         loop {
             interval.tick().await;
@@ -677,7 +681,8 @@ pub fn spawn_backup_scheduler(db: std::sync::Arc<std::sync::Mutex<rusqlite::Conn
 
             for job in jobs {
                 let db_clone = Arc::clone(&db);
-                tokio::spawn(async move {
+                let rt_job = rt_inner.clone();
+                rt_job.spawn(async move {
                     log::info!(
                         "Backup scheduler: executing job '{}' (id={})",
                         job.name,
