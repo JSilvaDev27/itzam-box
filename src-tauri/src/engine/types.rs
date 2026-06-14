@@ -2,6 +2,7 @@
 // Copyright (C) 2026 SodigTech — GPL-3.0
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct ContainerInfo {
@@ -171,6 +172,247 @@ pub struct Vulnerability {
     pub title: String,
     pub description: String,
 }
+
+// ─── Kubernetes Types ─────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct KubectlStatus {
+    pub installed: bool,
+    pub version: Option<String>,
+    pub kubeconfig_parsed: bool,
+    pub contexts_count: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sContext {
+    pub name: String,
+    pub cluster: String,
+    pub user: String,
+    pub is_active: bool,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sPod {
+    pub name: String,
+    pub namespace: String,
+    pub status: String,
+    pub restarts: i32,
+    pub age: String,
+    pub node: String,
+    pub ip: Option<String>,
+    pub containers: Vec<K8sContainer>,
+    pub labels: HashMap<String, String>,
+    pub annotations: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sContainer {
+    pub name: String,
+    pub image: String,
+    pub ports: Vec<String>,
+    pub ready: bool,
+    pub restart_count: i32,
+    pub readiness_probe: Option<String>,
+    pub liveness_probe: Option<String>,
+    pub resources_limits: Option<HashMap<String, String>>,
+    pub resources_requests: Option<HashMap<String, String>>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sDeployment {
+    pub name: String,
+    pub namespace: String,
+    pub ready: String,
+    pub up_to_date: i32,
+    pub available: i32,
+    pub age: String,
+    pub strategy: String,
+    pub selector: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sService {
+    pub name: String,
+    pub namespace: String,
+    pub service_type: String,
+    pub cluster_ip: String,
+    pub external_ip: Option<String>,
+    pub ports: Vec<String>,
+    pub age: String,
+    pub selector: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sConfigMap {
+    pub name: String,
+    pub namespace: String,
+    pub keys_count: usize,
+    pub age: String,
+    pub data_keys: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sSecretMeta {
+    pub name: String,
+    pub namespace: String,
+    pub secret_type: String,
+    pub keys_count: usize,
+    pub age: String,
+    pub data_keys: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct K8sEvent {
+    pub timestamp: String,
+    pub event_type: String,
+    pub reason: String,
+    pub message: String,
+}
+
+// ─── Swarm Types ─────────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SwarmStatus {
+    pub active: bool,
+    pub node_id: Option<String>,
+    pub nodes_count: usize,
+    pub managers_count: usize,
+    pub services_count: usize,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SwarmNode {
+    pub id: String,
+    pub hostname: String,
+    pub role: String,
+    pub status: String,
+    pub availability: String,
+    pub engine_version: String,
+    pub ip_address: String,
+    pub cpu_cores: Option<i32>,
+    pub memory_bytes: Option<i64>,
+    pub labels: HashMap<String, String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SwarmService {
+    pub id: String,
+    pub name: String,
+    pub mode: String,
+    pub replicas: String,
+    pub image: String,
+    pub ports: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct SwarmStack {
+    pub name: String,
+    pub services_count: usize,
+    pub orchestrator: String,
+}
+
+// ─── Backup Types ─────────────────────────────────────────────────────────
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BackupSnapshot {
+    pub id: i64,
+    pub name: String,
+    pub source_volume: String,
+    pub destination_path: String,
+    pub compressed_size_bytes: i64,
+    pub original_size_bytes: i64,
+    pub sha256_checksum: String,
+    pub status: String, // Success, Failed, InProgress
+    pub duration_seconds: Option<i32>,
+    pub created_at: String, // ISO 8601
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BackupJob {
+    pub id: i64,
+    pub name: String,
+    pub frequency: String, // hourly, daily, weekly, custom
+    pub cron_expression: Option<String>,
+    pub source_volumes: Vec<String>,
+    pub destination_path: String,
+    pub retention_count: i32,
+    pub enabled: bool,
+    pub next_run: Option<String>,
+    pub last_run: Option<String>,
+    pub last_status: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BackupJobConfig {
+    pub name: String,
+    pub frequency: String,
+    pub cron_expression: Option<String>,
+    pub source_volumes: Vec<String>,
+    pub destination_path: String,
+    pub retention_count: i32,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BackupProgress {
+    pub job_id: String,
+    pub bytes_processed: i64,
+    pub total_bytes: i64,
+    pub percentage: u8,
+    pub status: String,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct BackupHistory {
+    pub id: i64,
+    pub job_id: Option<i64>,
+    pub name: String,
+    pub source_volume: String,
+    pub destination_path: String,
+    pub compressed_size_bytes: i64,
+    pub original_size_bytes: i64,
+    pub sha256_checksum: String,
+    pub status: String,
+    pub failure_reason: Option<String>,
+    pub duration_seconds: Option<i32>,
+    pub created_at: String,
+}
+
+// ─── Metrics / Time-Series Types ─────────────────────────────────────────
+
+/// A single point from any metrics table (raw / 5-min / 30-min aggregates).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MetricsDataPoint {
+    pub timestamp: i64,
+    pub cpu_percent: f64,
+    pub memory_used_bytes: u64,
+    pub memory_total_bytes: u64,
+    pub disk_used_bytes: u64,
+    pub sample_count: u32,
+}
+
+/// A per-container metrics point (raw or 5-min aggregate).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct ContainerMetricsPoint {
+    pub timestamp: i64,
+    pub container_id: String,
+    pub cpu_percent: f64,
+    pub memory_usage_bytes: u64,
+    pub network_rx_bytes: u64,
+    pub network_tx_bytes: u64,
+    pub block_read_bytes: u64,
+    pub block_write_bytes: u64,
+    pub sample_count: u32,
+}
+
+/// Describes a time range for metrics queries.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct MetricRange {
+    pub from: i64,
+    pub to: i64,
+    pub point_count: usize,
+}
+
+// ─── Tests ───────────────────────────────────────────────────────────────
 
 #[cfg(test)]
 mod tests {

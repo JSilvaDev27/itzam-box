@@ -38,7 +38,10 @@ pub struct RegistrySafe {
 /// List all registries (without auth_token for security).
 #[tauri::command]
 pub async fn list_registries(state: State<'_, AppState>) -> Result<Vec<RegistrySafe>, String> {
-    let db = state.db.lock().map_err(|e| format!("DB lock error: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("DB lock error: {}", e))?;
     let mut stmt = db
         .prepare("SELECT id, name, url, username, is_default FROM registries ORDER BY name")
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -72,7 +75,10 @@ pub async fn add_registry(
     auth_token: Option<String>,
     is_default: bool,
 ) -> Result<i64, String> {
-    let db = state.db.lock().map_err(|e| format!("DB lock error: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("DB lock error: {}", e))?;
 
     if is_default {
         db.execute("UPDATE registries SET is_default = 0", [])
@@ -100,7 +106,10 @@ pub async fn update_registry(
     auth_token: Option<String>,
     is_default: bool,
 ) -> Result<(), String> {
-    let db = state.db.lock().map_err(|e| format!("DB lock error: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("DB lock error: {}", e))?;
 
     if is_default {
         db.execute("UPDATE registries SET is_default = 0", [])
@@ -119,16 +128,25 @@ pub async fn update_registry(
 /// Remove a registry by id.
 #[tauri::command]
 pub async fn remove_registry(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let db = state.db.lock().map_err(|e| format!("DB lock error: {}", e))?;
-    db.execute("DELETE FROM registries WHERE id = ?1", rusqlite::params![id])
-        .map_err(|e| format!("Failed to delete registry: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("DB lock error: {}", e))?;
+    db.execute(
+        "DELETE FROM registries WHERE id = ?1",
+        rusqlite::params![id],
+    )
+    .map_err(|e| format!("Failed to delete registry: {}", e))?;
     Ok(())
 }
 
 /// Set the given registry as the default (unmark others first).
 #[tauri::command]
 pub async fn set_default_registry(state: State<'_, AppState>, id: i64) -> Result<(), String> {
-    let db = state.db.lock().map_err(|e| format!("DB lock error: {}", e))?;
+    let db = state
+        .db
+        .lock()
+        .map_err(|e| format!("DB lock error: {}", e))?;
     db.execute("UPDATE registries SET is_default = 0", [])
         .map_err(|e| format!("Failed to reset defaults: {}", e))?;
     db.execute(
@@ -240,7 +258,9 @@ pub async fn push_image(
             .map_err(|e| format!("Failed to run docker tag: {}", e))?;
 
         if !tag_status.status.success() {
-            let err = String::from_utf8_lossy(&tag_status.stderr).trim().to_string();
+            let err = String::from_utf8_lossy(&tag_status.stderr)
+                .trim()
+                .to_string();
             let err_msg = format!("docker tag failed: {}", err);
             let complete = PushComplete {
                 success: false,

@@ -56,7 +56,8 @@ pub async fn get_notifications(
 ) -> Result<Vec<NotificationRecord>, String> {
     let conn = state.db.lock().map_err(|e| e.to_string())?;
 
-    let mut query = "SELECT id, type, title, message, read, created_at FROM notifications".to_string();
+    let mut query =
+        "SELECT id, type, title, message, read, created_at FROM notifications".to_string();
     if unread_only.unwrap_or(false) {
         query.push_str(" WHERE read = 0");
     }

@@ -12,6 +12,7 @@ import { useNotifications } from '../composables/useNotifications'
 import SkeletonLoader from '../components/shared/SkeletonLoader.vue'
 import EmptyState from '../components/shared/EmptyState.vue'
 import ErrorState from '../components/shared/ErrorState.vue'
+import AnimatedCounter from '../components/shared/AnimatedCounter.vue'
 import CpuChart from '../components/charts/CpuChart.vue'
 import RamChart from '../components/charts/RamChart.vue'
 
@@ -147,27 +148,37 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
     <div class="metric-card">
       <div class="metric-icon green"><i class="fa-solid fa-cubes"></i></div>
       <div class="metric-label">Active Containers</div>
-      <div class="metric-value" style="color:var(--accent-green)">{{ runningContainers.length }}</div>
-      <div class="metric-delta">{{ containers.length }} total</div>
+      <div class="metric-value" style="color:var(--accent-green)">
+        <AnimatedCounter :value="runningContainers.length" />
+      </div>
+      <div class="metric-delta"><AnimatedCounter :value="containers.length" /> total</div>
     </div>
     <div class="metric-card">
       <div class="metric-icon cyan"><i class="fa-solid fa-layer-group"></i></div>
       <div class="metric-label">Local Images</div>
-      <div class="metric-value">{{ images.length }}</div>
-      <div class="metric-delta">{{ volumes.length }} volumes</div>
+      <div class="metric-value">
+        <AnimatedCounter :value="images.length" />
+      </div>
+      <div class="metric-delta"><AnimatedCounter :value="volumes.length" /> volumes</div>
     </div>
     <div class="metric-card">
       <div class="metric-icon purple"><i class="fa-solid fa-microchip"></i></div>
       <div class="metric-label">CPU Usage</div>
       <div class="metric-value" :style="{ color: (hostMetrics?.cpu_usage_percent ?? 0) > 80 ? 'var(--accent-red)' : 'var(--accent-green)' }">
-        {{ hostMetrics?.cpu_usage_percent.toFixed(1) ?? '--' }}%
+        <template v-if="hostMetrics">
+          <AnimatedCounter :value="Math.round(hostMetrics.cpu_usage_percent * 10) / 10" :decimals="1" suffix="%" />
+        </template>
+        <template v-else>--%</template>
       </div>
       <div class="metric-delta">{{ hostMetrics?.cpu_cores ?? '--' }} cores</div>
     </div>
     <div class="metric-card">
       <div class="metric-icon amber"><i class="fa-solid fa-memory"></i></div>
       <div class="metric-label">Memory</div>
-      <div class="metric-value">{{ memoryPercent }}%</div>
+      <div class="metric-value">
+        <AnimatedCounter v-if="hostMetrics" :value="Number(memoryPercent)" suffix="%" />
+        <template v-else>--%</template>
+      </div>
       <div class="metric-delta" v-if="hostMetrics">
         {{ formatBytes(hostMetrics.memory_used_bytes) }} / {{ formatBytes(hostMetrics.memory_total_bytes) }}
       </div>

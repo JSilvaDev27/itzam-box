@@ -68,4 +68,36 @@ describe('SkeletonLoader component', () => {
     })
     expect(wrapper.find('.skeleton-text-lg').exists()).toBe(true)
   })
+
+  it('renders drawer variant with custom count', () => {
+    const wrapper = mount(SkeletonLoader, {
+      props: {
+        variant: 'drawer',
+        count: 3,
+      },
+    })
+    expect(wrapper.findAll('.skeleton-text-xs').length).toBeGreaterThanOrEqual(3)
+  })
+
+  it('renders form variant with custom count', () => {
+    const wrapper = mount(SkeletonLoader, {
+      props: {
+        variant: 'form',
+        count: 2,
+      },
+    })
+    // Form variant renders skeleton-text-xs elements for labels
+    expect(wrapper.findAll('.skeleton-text-xs').length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('renders list variant with custom count', () => {
+    const wrapper = mount(SkeletonLoader, {
+      props: {
+        variant: 'list',
+        count: 3,
+      },
+    })
+    // List items have 32x32 icon skeletons
+    expect(wrapper.findAll('[style*="width:32px"]').length).toBe(3)
+  })
 })

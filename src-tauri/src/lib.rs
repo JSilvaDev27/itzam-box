@@ -21,6 +21,7 @@ use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
 pub struct AppState {
     pub engine: Arc<dyn ContainerEngine>,
     pub db: Arc<Mutex<rusqlite::Connection>>,
+    pub db_path: PathBuf,
 }
 
 fn app_data_dir() -> PathBuf {
@@ -35,12 +36,15 @@ fn app_data_dir() -> PathBuf {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let db_path = app_data_dir().join("itzambox.db");
+    let db_path_clone = db_path.clone();
     let db = setup_database(db_path).expect("Failed to initialize database");
     let engine = DockerLinuxEngine::new();
+    let db_arc = Arc::new(Mutex::new(db));
 
     let state = AppState {
         engine: Arc::new(engine),
-        db: Arc::new(Mutex::new(db)),
+        db: Arc::clone(&db_arc),
+        db_path: db_path_clone,
     };
 
     tauri::Builder::default()
@@ -70,13 +74,13 @@ pub fn run() {
                 })
                 .build(),
         )
-        .setup(|app| {
+        .setup(move |app| {
             log::info!("ItzamBox started — engine initialized");
 
             // Seed built-in container templates on first run
             let state = app.state::<AppState>();
-            let rt = tokio::runtime::Runtime::new()
-                .expect("Failed to create tokio runtime for seeding");
+            let rt =
+                tokio::runtime::Runtime::new().expect("Failed to create tokio runtime for seeding");
             rt.block_on(async {
                 let needs_seed = match state.db.lock() {
                     Ok(db) => {
@@ -100,6 +104,83 @@ pub fn run() {
                     }
                 }
             });
+
+            // ─── Compaction Background Tasks ──────────────────────────
+            let db_5min = Arc::clone(&db_arc);
+            let db_30min = Arc::clone(&db_arc);
+            let db_purge = Arc::clone(&db_arc);
+
+            // 5-minute compaction: run every 5 minutes, compact raw data older than 24h.
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300));
+                loop {
+                    interval.tick().await;
+                    let db = match db_5min.lock() {
+                        Ok(db) => db,
+                        Err(e) => {
+                            log::error!("compaction_5min lock: {}", e);
+                            continue;
+                        }
+                    };
+                    match crate::engine::metrics_history::compact_5min(&db, 86_400) {
+                        Ok(n) => {
+                            if n > 0 {
+                                log::info!("Compaction 5min: created {} buckets", n);
+                            }
+                        }
+                        Err(e) => log::error!("Compaction 5min failed: {}", e),
+                    }
+                }
+            });
+
+            // 30-minute compaction: run every 30 minutes, compact 5-min data older than 7d.
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(1800));
+                loop {
+                    interval.tick().await;
+                    let db = match db_30min.lock() {
+                        Ok(db) => db,
+                        Err(e) => {
+                            log::error!("compaction_30min lock: {}", e);
+                            continue;
+                        }
+                    };
+                    match crate::engine::metrics_history::compact_30min(&db, 604_800) {
+                        Ok(n) => {
+                            if n > 0 {
+                                log::info!("Compaction 30min: created {} buckets", n);
+                            }
+                        }
+                        Err(e) => log::error!("Compaction 30min failed: {}", e),
+                    }
+                }
+            });
+
+            // Daily purge: run every 24 hours, delete data older than 30 days.
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(86_400));
+                loop {
+                    interval.tick().await;
+                    let db = match db_purge.lock() {
+                        Ok(db) => db,
+                        Err(e) => {
+                            log::error!("purge lock: {}", e);
+                            continue;
+                        }
+                    };
+                    match crate::engine::metrics_history::purge_old_data(&db, 30) {
+                        Ok(n) => {
+                            if n > 0 {
+                                log::info!("Purge: deleted {} old metric buckets", n);
+                            }
+                        }
+                        Err(e) => log::error!("Purge failed: {}", e),
+                    }
+                }
+            });
+
+            // ─── Backup Scheduler ─────────────────────────────────────
+            commands::backup::spawn_backup_scheduler(Arc::clone(&db_arc));
 
             Ok(())
         })
@@ -212,6 +293,49 @@ pub fn run() {
             commands::scanner::detect_scanner,
             commands::scanner::scan_image,
             commands::scanner::get_scan_history,
+            // Backup & Restore
+            commands::backup::create_backup,
+            commands::backup::list_backups,
+            commands::backup::restore_backup,
+            commands::backup::delete_backup,
+            commands::backup::verify_checksum,
+            commands::backup::cancel_backup,
+            commands::backup::schedule_backup,
+            commands::backup::list_backup_jobs,
+            commands::backup::toggle_backup_job,
+            commands::backup::delete_backup_job,
+            commands::backup::export_container_data,
+            commands::backup::import_to_volume,
+            // Docker Swarm
+            commands::swarm::swarm_status,
+            commands::swarm::swarm_init,
+            commands::swarm::swarm_join,
+            commands::swarm::swarm_leave,
+            commands::swarm::list_swarm_nodes,
+            commands::swarm::inspect_swarm_node,
+            commands::swarm::list_swarm_services,
+            commands::swarm::inspect_swarm_service,
+            commands::swarm::list_stacks,
+            commands::swarm::deploy_stack,
+            commands::swarm::remove_stack,
+            // Kubernetes
+            commands::kubernetes::detect_kubectl,
+            commands::kubernetes::list_k8s_contexts,
+            commands::kubernetes::set_k8s_context,
+            commands::kubernetes::list_namespaces,
+            commands::kubernetes::list_pods,
+            commands::kubernetes::list_deployments,
+            commands::kubernetes::list_services,
+            commands::kubernetes::list_configmaps,
+            commands::kubernetes::list_secrets,
+            commands::kubernetes::get_resource_yaml,
+            commands::kubernetes::get_pod_events,
+            // Metrics History
+            commands::metrics_history::get_host_metrics_range,
+            commands::metrics_history::get_container_metrics_range,
+            commands::metrics_history::export_metrics_csv,
+            commands::metrics_history::export_metrics_json,
+            commands::metrics_history::get_metrics_db_size,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ItzamBox");

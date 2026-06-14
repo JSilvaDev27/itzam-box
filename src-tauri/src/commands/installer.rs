@@ -6,20 +6,20 @@
 // Progress is emitted via Tauri events for real-time UI updates.
 
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::path::Path;
-use tauri::Emitter;
+use std::process::Command;
 use tauri::AppHandle;
+use tauri::Emitter;
 
 // ─── Data Types ─────────────────────────────────────────────────────────────
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct LinuxDistro {
-    pub id: String,               // "ubuntu", "debian", "fedora", "arch", "opensuse-tumbleweed"
-    pub name: String,             // "Ubuntu 24.04 LTS"
-    pub version: String,          // "24.04"
-    pub id_like: Option<String>,  // "debian" (for Ubuntu, Mint, etc.)
-    pub package_manager: String,  // "apt", "dnf", "yum", "pacman", "zypper"
+    pub id: String,      // "ubuntu", "debian", "fedora", "arch", "opensuse-tumbleweed"
+    pub name: String,    // "Ubuntu 24.04 LTS"
+    pub version: String, // "24.04"
+    pub id_like: Option<String>, // "debian" (for Ubuntu, Mint, etc.)
+    pub package_manager: String, // "apt", "dnf", "yum", "pacman", "zypper"
     pub supported: bool,
 }
 
@@ -51,16 +51,14 @@ fn resolve_package_manager(id: &str, id_like: Option<&str>) -> &'static str {
         "fedora" | "rhel" | "centos" | "rocky" | "almalinux" => "dnf",
         "arch" | "manjaro" | "endeavouros" | "arcolinux" | "garuda" => "pacman",
         "opensuse-tumbleweed" | "opensuse-leap" | "sles" | "opensuse" => "zypper",
-        _ => {
-            match id_like {
-                Some("debian") => "apt",
-                Some("fedora") => "dnf",
-                Some("rhel") => "dnf",
-                Some("arch") => "pacman",
-                Some("suse") => "zypper",
-                _ => "unknown",
-            }
-        }
+        _ => match id_like {
+            Some("debian") => "apt",
+            Some("fedora") => "dnf",
+            Some("rhel") => "dnf",
+            Some("arch") => "pacman",
+            Some("suse") => "zypper",
+            _ => "unknown",
+        },
     }
 }
 
@@ -218,15 +216,11 @@ pub async fn check_docker_installed() -> Result<DockerInstallStatus, String> {
 /// Returns `(command, prefix_args)`.
 fn find_escalation() -> Result<(&'static str, Vec<&'static str>), String> {
     // Try pkexec first (GUI auth dialog)
-    if Path::new("/usr/bin/pkexec").exists()
-        || Path::new("/bin/pkexec").exists()
-    {
+    if Path::new("/usr/bin/pkexec").exists() || Path::new("/bin/pkexec").exists() {
         return Ok(("pkexec", vec![]));
     }
     // Fallback to sudo -n (non-interactive)
-    if Path::new("/usr/bin/sudo").exists()
-        || Path::new("/bin/sudo").exists()
-    {
+    if Path::new("/usr/bin/sudo").exists() || Path::new("/bin/sudo").exists() {
         return Ok(("sudo", vec!["-n"]));
     }
     Err("No privilege escalation tool found. Please install pkexec or sudo.".to_string())
@@ -329,19 +323,43 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
     let mut step: usize = 0;
 
     step += 1;
-    emit_progress(&app, step, total, "Updating package lists...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Updating package lists...",
+        "in_progress",
+    );
     run_elevated_status("apt-get", &["update"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Installing prerequisites...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Installing prerequisites...",
+        "in_progress",
+    );
     run_elevated_status("apt-get", &["install", "-y", "ca-certificates", "curl"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Creating keyrings directory...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Creating keyrings directory...",
+        "in_progress",
+    );
     run_elevated_status("install", &["-m", "0755", "-d", "/etc/apt/keyrings"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Downloading Docker GPG key...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Downloading Docker GPG key...",
+        "in_progress",
+    );
     // curl needs to run as root to write to /etc/apt/keyrings
     run_elevated_status(
         "curl",
@@ -354,7 +372,13 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
     )?;
 
     step += 1;
-    emit_progress(&app, step, total, "Setting GPG key permissions...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Setting GPG key permissions...",
+        "in_progress",
+    );
     run_elevated_status("chmod", &["a+r", "/etc/apt/keyrings/docker.asc"])?;
 
     step += 1;
@@ -366,8 +390,7 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
         "in_progress",
     );
     // Determine the distro codename for the apt source
-    let os_release_content =
-        std::fs::read_to_string("/etc/os-release").unwrap_or_default();
+    let os_release_content = std::fs::read_to_string("/etc/os-release").unwrap_or_default();
     let codename = os_release_field(&os_release_content, "VERSION_CODENAME")
         .or_else(|| os_release_field(&os_release_content, "UBUNTU_CODENAME"))
         .unwrap_or_else(|| {
@@ -388,8 +411,7 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
             }
         });
 
-    let arch = run_cmd("dpkg", &["--print-architecture"])
-        .unwrap_or_else(|_| "amd64".to_string());
+    let arch = run_cmd("dpkg", &["--print-architecture"]).unwrap_or_else(|_| "amd64".to_string());
 
     // Build the repo string
     let repo_line = format!(
@@ -407,11 +429,23 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
     )?;
 
     step += 1;
-    emit_progress(&app, step, total, "Updating package lists with Docker repo...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Updating package lists with Docker repo...",
+        "in_progress",
+    );
     run_elevated_status("apt-get", &["update"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Installing Docker Engine...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Installing Docker Engine...",
+        "in_progress",
+    );
     run_elevated_status(
         "apt-get",
         &[
@@ -426,11 +460,23 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
     )?;
 
     step += 1;
-    emit_progress(&app, step, total, "Starting Docker service...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Starting Docker service...",
+        "in_progress",
+    );
     run_elevated_status("systemctl", &["enable", "--now", "docker"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Adding user to docker group...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Adding user to docker group...",
+        "in_progress",
+    );
     // Get the current user from $SUDO_USER or $USER
     let user = std::env::var("SUDO_USER")
         .or_else(|_| std::env::var("USER"))
@@ -438,13 +484,7 @@ async fn install_apt(app: AppHandle, distro: &LinuxDistro) -> Result<(), String>
     run_elevated_status("usermod", &["-aG", "docker", &user])?;
 
     step += 1;
-    emit_progress(
-        &app,
-        step,
-        total,
-        "Installation complete!",
-        "completed",
-    );
+    emit_progress(&app, step, total, "Installation complete!", "completed");
 
     Ok(())
 }
@@ -455,11 +495,23 @@ async fn install_dnf(app: AppHandle, _distro: &LinuxDistro) -> Result<(), String
     let mut step: usize = 0;
 
     step += 1;
-    emit_progress(&app, step, total, "Installing dnf-plugins-core...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Installing dnf-plugins-core...",
+        "in_progress",
+    );
     run_elevated_status("dnf", &["-y", "install", "dnf-plugins-core"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Adding Docker repository...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Adding Docker repository...",
+        "in_progress",
+    );
     run_elevated_status(
         "dnf",
         &[
@@ -470,7 +522,13 @@ async fn install_dnf(app: AppHandle, _distro: &LinuxDistro) -> Result<(), String
     )?;
 
     step += 1;
-    emit_progress(&app, step, total, "Installing Docker Engine...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Installing Docker Engine...",
+        "in_progress",
+    );
     run_elevated_status(
         "dnf",
         &[
@@ -485,11 +543,23 @@ async fn install_dnf(app: AppHandle, _distro: &LinuxDistro) -> Result<(), String
     )?;
 
     step += 1;
-    emit_progress(&app, step, total, "Starting Docker service...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Starting Docker service...",
+        "in_progress",
+    );
     run_elevated_status("systemctl", &["enable", "--now", "docker"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Adding user to docker group...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Adding user to docker group...",
+        "in_progress",
+    );
     let user = std::env::var("SUDO_USER")
         .or_else(|_| std::env::var("USER"))
         .unwrap_or_else(|_| "root".to_string());
@@ -505,19 +575,43 @@ async fn install_pacman(app: AppHandle, _distro: &LinuxDistro) -> Result<(), Str
     let mut step: usize = 0;
 
     step += 1;
-    emit_progress(&app, step, total, "Updating system packages...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Updating system packages...",
+        "in_progress",
+    );
     run_elevated_status("pacman", &["-Syu", "--noconfirm"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Installing Docker and Docker Compose...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Installing Docker and Docker Compose...",
+        "in_progress",
+    );
     run_elevated_status("pacman", &["-S", "--noconfirm", "docker", "docker-compose"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Starting Docker service...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Starting Docker service...",
+        "in_progress",
+    );
     run_elevated_status("systemctl", &["enable", "--now", "docker"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Adding user to docker group...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Adding user to docker group...",
+        "in_progress",
+    );
     let user = std::env::var("SUDO_USER")
         .or_else(|_| std::env::var("USER"))
         .unwrap_or_else(|_| "root".to_string());
@@ -533,19 +627,43 @@ async fn install_zypper(app: AppHandle, _distro: &LinuxDistro) -> Result<(), Str
     let mut step: usize = 0;
 
     step += 1;
-    emit_progress(&app, step, total, "Refreshing repositories...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Refreshing repositories...",
+        "in_progress",
+    );
     run_elevated_status("zypper", &["refresh"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Installing Docker and Docker Compose...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Installing Docker and Docker Compose...",
+        "in_progress",
+    );
     run_elevated_status("zypper", &["install", "-y", "docker", "docker-compose"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Starting Docker service...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Starting Docker service...",
+        "in_progress",
+    );
     run_elevated_status("systemctl", &["enable", "--now", "docker"])?;
 
     step += 1;
-    emit_progress(&app, step, total, "Adding user to docker group...", "in_progress");
+    emit_progress(
+        &app,
+        step,
+        total,
+        "Adding user to docker group...",
+        "in_progress",
+    );
     let user = std::env::var("SUDO_USER")
         .or_else(|_| std::env::var("USER"))
         .unwrap_or_else(|_| "root".to_string());
@@ -562,7 +680,13 @@ pub async fn install_docker(app: AppHandle) -> Result<(), String> {
     // Only Linux is supported
     #[cfg(not(target_os = "linux"))]
     {
-        emit_progress(&app, 0, 1, "Docker installer is only available on Linux", "error");
+        emit_progress(
+            &app,
+            0,
+            1,
+            "Docker installer is only available on Linux",
+            "error",
+        );
         return Err("Docker installer is only available on Linux".to_string());
     }
 

@@ -23,7 +23,10 @@ pub struct DockerHubImage {
 /// Search Docker Hub for images matching the given query.
 /// Calls the Docker Hub v2 REST API directly.
 #[tauri::command]
-pub async fn search_dockerhub(query: String, limit: Option<usize>) -> Result<Vec<DockerHubImage>, String> {
+pub async fn search_dockerhub(
+    query: String,
+    limit: Option<usize>,
+) -> Result<Vec<DockerHubImage>, String> {
     let page_size = limit.unwrap_or(25).min(100);
     let url = format!(
         "https://hub.docker.com/v2/search/repositories/?query={}&page_size={}",
@@ -40,10 +43,7 @@ pub async fn search_dockerhub(query: String, limit: Option<usize>) -> Result<Vec
         .map_err(|e| format!("Failed to reach Docker Hub: {}", e))?;
 
     if !response.status().is_success() {
-        return Err(format!(
-            "Docker Hub returned HTTP {}",
-            response.status()
-        ));
+        return Err(format!("Docker Hub returned HTTP {}", response.status()));
     }
 
     let body: serde_json::Value = response
@@ -71,8 +71,14 @@ pub async fn search_dockerhub(query: String, limit: Option<usize>) -> Result<Vec
                 .to_string(),
             star_count: r.get("star_count").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
             pull_count: r.get("pull_count").and_then(|v| v.as_u64()).unwrap_or(0),
-            is_official: r.get("is_official").and_then(|v| v.as_bool()).unwrap_or(false),
-            is_automated: r.get("is_automated").and_then(|v| v.as_bool()).unwrap_or(false),
+            is_official: r
+                .get("is_official")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
+            is_automated: r
+                .get("is_automated")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false),
         })
         .collect();
 
@@ -144,10 +150,7 @@ pub async fn get_image_history(
 /// Save one or more images as a tar archive.
 /// Executes: `docker save -o <output_path> <image_name>`
 #[tauri::command]
-pub async fn save_image(
-    image_name: String,
-    output_path: String,
-) -> Result<(), String> {
+pub async fn save_image(image_name: String, output_path: String) -> Result<(), String> {
     // Ensure parent directory exists
     if let Some(parent) = Path::new(&output_path).parent() {
         std::fs::create_dir_all(parent)
@@ -277,13 +280,17 @@ pub async fn build_image(
     cmd.stderr(Stdio::piped());
 
     // ── Spawn the process ───────────────────────────────────────────────
-    let mut child = cmd.spawn().map_err(|e| {
-        format!("Failed to spawn `docker build`: {}", e)
-    })?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| format!("Failed to spawn `docker build`: {}", e))?;
 
-    let stdout = child.stdout.take()
+    let stdout = child
+        .stdout
+        .take()
         .ok_or_else(|| "Failed to capture stdout".to_string())?;
-    let stderr = child.stderr.take()
+    let stderr = child
+        .stderr
+        .take()
         .ok_or_else(|| "Failed to capture stderr".to_string())?;
 
     let app_stdout = app.clone();
@@ -311,13 +318,17 @@ pub async fn build_image(
     });
 
     // ── Wait for both reader threads ────────────────────────────────────
-    stdout_handle.join().map_err(|_| "stdout reader panicked".to_string())?;
-    stderr_handle.join().map_err(|_| "stderr reader panicked".to_string())?;
+    stdout_handle
+        .join()
+        .map_err(|_| "stdout reader panicked".to_string())?;
+    stderr_handle
+        .join()
+        .map_err(|_| "stderr reader panicked".to_string())?;
 
     // ── Wait for process to finish ──────────────────────────────────────
-    let exit_status = child.wait().map_err(|e| {
-        format!("Failed to wait on docker build: {}", e)
-    })?;
+    let exit_status = child
+        .wait()
+        .map_err(|e| format!("Failed to wait on docker build: {}", e))?;
 
     if !exit_status.success() {
         let exit_code = exit_status.code().unwrap_or(-1);
@@ -352,11 +363,7 @@ pub async fn build_image(
 
 /// Re-run `docker build` quietly and parse the image ID from its output.
 /// We do a second pass because the streaming threads consumed the output.
-fn extract_image_id(
-    dockerfile_path: &str,
-    context_dir: &str,
-    tags: &[String],
-) -> Option<String> {
+fn extract_image_id(dockerfile_path: &str, context_dir: &str, tags: &[String]) -> Option<String> {
     let mut cmd = Command::new("docker");
     cmd.arg("build");
     cmd.arg("-q"); // Quiet mode — only print image ID

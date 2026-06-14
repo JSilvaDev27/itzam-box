@@ -18,13 +18,11 @@ use tauri::{AppHandle, State};
 #[tauri::command]
 pub async fn detect_scanner() -> Result<Option<String>, String> {
     if is_tool_installed("trivy") {
-        let version = get_tool_version("trivy", "version")
-            .unwrap_or_else(|| "unknown".into());
+        let version = get_tool_version("trivy", "version").unwrap_or_else(|| "unknown".into());
         return Ok(Some(format!("trivy v{}", version)));
     }
     if is_tool_installed("grype") {
-        let version = get_tool_version("grype", "version")
-            .unwrap_or_else(|| "unknown".into());
+        let version = get_tool_version("grype", "version").unwrap_or_else(|| "unknown".into());
         return Ok(Some(format!("grype v{}", version)));
     }
     Ok(None)
@@ -39,10 +37,7 @@ fn is_tool_installed(name: &str) -> bool {
 }
 
 fn get_tool_version(tool: &str, arg: &str) -> Option<String> {
-    let out = Command::new(tool)
-        .arg(arg)
-        .output()
-        .ok()?;
+    let out = Command::new(tool).arg(arg).output().ok()?;
     if !out.status.success() {
         return None;
     }
@@ -137,7 +132,12 @@ pub async fn scan_image(
         return Err("No vulnerability scanner found. Install Trivy (recommended) or Grype.".into());
     };
 
-    emit_progress(&app, "scan", &format!("Scanning {} with {}…", image_name, scanner)).ok();
+    emit_progress(
+        &app,
+        "scan",
+        &format!("Scanning {} with {}…", image_name, scanner),
+    )
+    .ok();
 
     // 2. Run the scan
     let output = if scanner == "trivy" {
@@ -156,10 +156,26 @@ pub async fn scan_image(
     };
 
     // 4. Categorize by severity (case-insensitive)
-    let critical: Vec<Vulnerability> = all_vulns.iter().filter(|v| v.severity.to_lowercase() == "critical").cloned().collect();
-    let high: Vec<Vulnerability> = all_vulns.iter().filter(|v| v.severity.to_lowercase() == "high").cloned().collect();
-    let medium: Vec<Vulnerability> = all_vulns.iter().filter(|v| v.severity.to_lowercase() == "medium").cloned().collect();
-    let low: Vec<Vulnerability> = all_vulns.iter().filter(|v| v.severity.to_lowercase() == "low").cloned().collect();
+    let critical: Vec<Vulnerability> = all_vulns
+        .iter()
+        .filter(|v| v.severity.to_lowercase() == "critical")
+        .cloned()
+        .collect();
+    let high: Vec<Vulnerability> = all_vulns
+        .iter()
+        .filter(|v| v.severity.to_lowercase() == "high")
+        .cloned()
+        .collect();
+    let medium: Vec<Vulnerability> = all_vulns
+        .iter()
+        .filter(|v| v.severity.to_lowercase() == "medium")
+        .cloned()
+        .collect();
+    let low: Vec<Vulnerability> = all_vulns
+        .iter()
+        .filter(|v| v.severity.to_lowercase() == "low")
+        .cloned()
+        .collect();
 
     let total = all_vulns.len();
 
@@ -193,7 +209,12 @@ pub async fn scan_image(
         log::error!("Failed to lock database for scan result");
     }
 
-    emit_progress(&app, "done", &format!("Scan complete — {} vulnerabilities found.", total)).ok();
+    emit_progress(
+        &app,
+        "done",
+        &format!("Scan complete — {} vulnerabilities found.", total),
+    )
+    .ok();
 
     Ok(report)
 }
@@ -204,8 +225,10 @@ fn run_trivy_scan(image_name: &str) -> Result<String, String> {
     let output = Command::new("trivy")
         .args([
             "image",
-            "--format", "json",
-            "--severity", "CRITICAL,HIGH,MEDIUM,LOW",
+            "--format",
+            "json",
+            "--severity",
+            "CRITICAL,HIGH,MEDIUM,LOW",
             image_name,
         ])
         .output()

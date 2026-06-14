@@ -70,10 +70,7 @@ fn ensure_compose() -> Result<(), String> {
     if compose_is_plugin() || compose_is_standalone() {
         Ok(())
     } else {
-        Err(
-            "Docker Compose not found. Install docker-compose or Docker Compose plugin."
-                .into(),
-        )
+        Err("Docker Compose not found. Install docker-compose or Docker Compose plugin.".into())
     }
 }
 
@@ -100,7 +97,9 @@ fn build_compose_cmd(args: &[&str], compose_file: &str) -> Command {
 fn run_compose(args: &[&str], compose_file: &str) -> Result<String, String> {
     ensure_compose()?;
     let mut cmd = build_compose_cmd(args, compose_file);
-    let output = cmd.output().map_err(|e| format!("Failed to execute: {}", e))?;
+    let output = cmd
+        .output()
+        .map_err(|e| format!("Failed to execute: {}", e))?;
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         return Err(stderr.to_string());
@@ -112,8 +111,7 @@ fn run_compose(args: &[&str], compose_file: &str) -> Result<String, String> {
 fn run_compose_spawn(args: &[&str], compose_file: &str) -> Result<(), String> {
     ensure_compose()?;
     let mut cmd = build_compose_cmd(args, compose_file);
-    cmd.spawn()
-        .map_err(|e| format!("Failed to spawn: {}", e))?;
+    cmd.spawn().map_err(|e| format!("Failed to spawn: {}", e))?;
     Ok(())
 }
 
@@ -356,10 +354,7 @@ fn parse_ps_text(output: &str) -> Vec<ComposeServiceStatus> {
 
         // Typical output columns: NAME, IMAGE, COMMAND, SERVICE, CREATED, STATUS, PORTS
         // We split by 2+ spaces to handle the variable-width columns
-        let columns: Vec<&str> = line
-            .split([' ', '\t'])
-            .filter(|s| !s.is_empty())
-            .collect();
+        let columns: Vec<&str> = line.split([' ', '\t']).filter(|s| !s.is_empty()).collect();
 
         if columns.len() < 4 {
             continue;
@@ -423,8 +418,7 @@ fn scan_for_compose(dir: &Path, max_depth: usize) -> Vec<(PathBuf, String, Vec<S
         if candidate.is_file() {
             let content = std::fs::read_to_string(&candidate).unwrap_or_default();
             let info = parse_compose_yaml(&content);
-            let service_names: Vec<String> =
-                info.services.into_iter().map(|s| s.name).collect();
+            let service_names: Vec<String> = info.services.into_iter().map(|s| s.name).collect();
             results.push((dir.to_path_buf(), cf.to_string(), service_names));
             return results; // Only one compose file per directory
         }
@@ -483,12 +477,10 @@ fn resolve_compose_file(project_path: &str) -> Result<String, String> {
 /// in the given directory (defaults to $HOME) up to 2 levels deep.
 #[tauri::command]
 pub async fn detect_compose_projects(dir: Option<String>) -> Result<Vec<ComposeProject>, String> {
-    let base = dir
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
-            PathBuf::from(home)
-        });
+    let base = dir.map(PathBuf::from).unwrap_or_else(|| {
+        let home = std::env::var("HOME").unwrap_or_else(|_| "/".to_string());
+        PathBuf::from(home)
+    });
 
     let found = scan_for_compose(&base, 2);
 
@@ -520,8 +512,8 @@ pub async fn parse_compose_file(project_path: String) -> Result<ComposeFileInfo,
     }
 
     let compose_path = resolve_compose_file(&project_path)?;
-    let content =
-        std::fs::read_to_string(&compose_path).map_err(|e| format!("Failed to read file: {}", e))?;
+    let content = std::fs::read_to_string(&compose_path)
+        .map_err(|e| format!("Failed to read file: {}", e))?;
 
     Ok(parse_compose_yaml(&content))
 }
@@ -643,7 +635,8 @@ pub async fn read_compose_file(path: String) -> Result<String, String> {
     let p = Path::new(&path);
     if p.is_dir() {
         let file_path = resolve_compose_file(&path)?;
-        std::fs::read_to_string(&file_path).map_err(|e| format!("Failed to read compose file: {}", e))
+        std::fs::read_to_string(&file_path)
+            .map_err(|e| format!("Failed to read compose file: {}", e))
     } else {
         std::fs::read_to_string(p).map_err(|e| format!("Failed to read compose file: {}", e))
     }
@@ -720,8 +713,8 @@ pub async fn format_compose_file(path: String) -> Result<String, String> {
         }
         Err(_) => {
             // Fallback: if npx/prettier is not found, just return original content
-            std::fs::read_to_string(&compose_file).map_err(|e| format!("Failed to read fallback: {}", e))
+            std::fs::read_to_string(&compose_file)
+                .map_err(|e| format!("Failed to read fallback: {}", e))
         }
     }
 }
-

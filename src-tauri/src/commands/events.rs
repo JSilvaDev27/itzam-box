@@ -9,8 +9,8 @@ use std::sync::Mutex;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::AsyncBufReadExt;
-use tokio::process::Command as TokioCommand;
 use tokio::io::BufReader as TokioBufReader;
+use tokio::process::Command as TokioCommand;
 
 use crate::engine::types::DockerEvent;
 
@@ -62,10 +62,7 @@ fn parse_docker_event(raw: &Value) -> DockerEvent {
         .unwrap_or("")
         .to_string();
 
-    let timestamp = raw
-        .get("time")
-        .and_then(|v| v.as_i64())
-        .unwrap_or(0);
+    let timestamp = raw.get("time").and_then(|v| v.as_i64()).unwrap_or(0);
 
     let attributes = raw
         .get("Actor")
@@ -173,9 +170,7 @@ pub async fn start_event_stream(
 /// Kills the child `docker events` process and clears the stored handle.
 /// Calling this when no stream is active is a no-op.
 #[tauri::command]
-pub async fn stop_event_stream(
-    state: State<'_, EventStreamState>,
-) -> Result<(), String> {
+pub async fn stop_event_stream(state: State<'_, EventStreamState>) -> Result<(), String> {
     let mut guard = state.child.lock().map_err(|e| e.to_string())?;
 
     if let Some(mut child) = guard.take() {

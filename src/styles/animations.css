@@ -1,0 +1,206 @@
+/* ═══════════════════════════════════════════════════════════════
+   ItzamBox — Animation & Transition Styles (T-075, T-076)
+   Copyright (C) 2026 SodigTech — GPL-3.0
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────
+   PAGE TRANSITIONS (T-075)
+   Fade + subtle slide for route changes
+   ───────────────────────────────────────────── */
+
+.page-enter-active,
+.page-leave-active {
+  transition:
+    opacity 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.page-enter-from {
+  opacity: 0;
+  transform: translateY(15px);
+}
+
+.page-leave-to {
+  opacity: 0;
+  transform: translateY(-15px);
+}
+
+/* ─────────────────────────────────────────────
+   SKELETON SHIMMER VARIANTS (T-075)
+   ───────────────────────────────────────────── */
+
+/* Staggered shimmer: each child delays its shimmer animation */
+.skeleton-staggered > .skeleton {
+  animation: shimmer 1.5s infinite;
+}
+
+.skeleton-staggered > .skeleton:nth-child(1) { animation-delay: 0ms; }
+.skeleton-staggered > .skeleton:nth-child(2) { animation-delay: 100ms; }
+.skeleton-staggered > .skeleton:nth-child(3) { animation-delay: 200ms; }
+.skeleton-staggered > .skeleton:nth-child(4) { animation-delay: 300ms; }
+.skeleton-staggered > .skeleton:nth-child(5) { animation-delay: 400ms; }
+.skeleton-staggered > .skeleton:nth-child(6) { animation-delay: 500ms; }
+.skeleton-staggered > .skeleton:nth-child(7) { animation-delay: 600ms; }
+.skeleton-staggered > .skeleton:nth-child(8) { animation-delay: 700ms; }
+.skeleton-staggered > .skeleton:nth-child(9) { animation-delay: 800ms; }
+.skeleton-staggered > .skeleton:nth-child(10) { animation-delay: 900ms; }
+
+/* Pulse animation for chart areas (no shimmer — just gentle opacity pulse) */
+.skeleton-pulse {
+  animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* Skeleton-to-content crossfade */
+.skeleton-crossfade-leave-active {
+  transition: opacity 300ms ease-out;
+  position: absolute;
+}
+.skeleton-crossfade-leave-to {
+  opacity: 0;
+}
+.skeleton-crossfade-enter-active {
+  transition: opacity 300ms ease-out;
+}
+.skeleton-crossfade-enter-from {
+  opacity: 0;
+}
+
+/* ─────────────────────────────────────────────
+   MICRO-INTERACTIONS (T-076)
+   ───────────────────────────────────────────── */
+
+/* Button hover/press */
+.btn-hover-lift {
+  transition:
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+.btn-hover-lift:hover {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-md);
+}
+.btn-hover-lift:active {
+  transform: scale(0.97);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Card hover — border accent transition */
+.card-hover-accent {
+  transition:
+    border-color 200ms ease-out,
+    transform 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+.card-hover-accent:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Row hover — background shift */
+.row-hover-shift {
+  transition: background-color 150ms ease;
+}
+.row-hover-shift:hover {
+  background: var(--bg-hover);
+}
+
+/* Focus-visible ring — keyboard only */
+.focus-ring:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─────────────────────────────────────────────
+   DRAG-TO-REORDER (T-076)
+   ───────────────────────────────────────────── */
+
+.dragging {
+  opacity: 0.4 !important;
+  transform: scale(0.98);
+}
+
+.drop-zone-indicator {
+  height: 3px;
+  background: var(--accent-cyan);
+  border-radius: 2px;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+}
+
+/* ─────────────────────────────────────────────
+   REDUCED MOTION OVERRIDE
+   All animations disabled when user prefers reduced motion
+   ───────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  /* Page transitions — instant */
+  .page-enter-active,
+  .page-leave-active {
+    transition: none !important;
+  }
+  .page-enter-from,
+  .page-leave-to {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  /* Skeleton shimmer — static opacity pulse only */
+  .skeleton,
+  .skeleton-shimmer {
+    animation: none !important;
+    opacity: 0.3;
+  }
+
+  /* Remove stagger delays */
+  .skeleton-staggered > .skeleton {
+    animation: none !important;
+  }
+
+  /* Micro-interactions — instant */
+  .btn-hover-lift:hover,
+  .btn-hover-lift:active {
+    transform: none !important;
+    box-shadow: none !important;
+  }
+
+  .card-hover-accent:hover {
+    transform: none !important;
+  }
+
+  .dragging {
+    opacity: 0.5 !important;
+    transform: none !important;
+  }
+
+  /* Ripple effect — disabled */
+  [class*="ripple"] {
+    animation: none !important;
+    display: none !important;
+  }
+
+  /* Counter animation — instant value */
+  .animated-counter {
+    transition: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   UTILITY: Fade in for content reveal
+   ───────────────────────────────────────────── */
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}

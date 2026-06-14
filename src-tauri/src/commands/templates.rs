@@ -67,7 +67,10 @@ pub async fn list_templates(state: State<'_, AppState>) -> Result<Vec<ContainerT
 
 /// Get a single template by ID.
 #[tauri::command]
-pub async fn get_template(state: State<'_, AppState>, id: i64) -> Result<ContainerTemplate, String> {
+pub async fn get_template(
+    state: State<'_, AppState>,
+    id: i64,
+) -> Result<ContainerTemplate, String> {
     let db = state.db.lock().map_err(|e| format!("Lock error: {}", e))?;
 
     db.query_row(
@@ -191,8 +194,11 @@ pub async fn delete_template(state: State<'_, AppState>, id: i64) -> Result<(), 
         return Err("Cannot delete built-in templates".to_string());
     }
 
-    db.execute("DELETE FROM container_templates WHERE id = ?1 AND is_builtin = 0", rusqlite::params![id])
-        .map_err(|e| format!("Failed to delete template: {}", e))?;
+    db.execute(
+        "DELETE FROM container_templates WHERE id = ?1 AND is_builtin = 0",
+        rusqlite::params![id],
+    )
+    .map_err(|e| format!("Failed to delete template: {}", e))?;
 
     Ok(())
 }

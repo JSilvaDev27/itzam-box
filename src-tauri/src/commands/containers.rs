@@ -3,8 +3,8 @@
 
 use crate::engine::types::ContainerInfo;
 use crate::AppState;
-use tauri::State;
 use std::process::Command;
+use tauri::State;
 
 #[tauri::command]
 pub async fn list_containers(
@@ -61,7 +61,16 @@ pub async fn get_container_stats(
     state: State<'_, AppState>,
     id: String,
 ) -> Result<crate::engine::types::ContainerStats, String> {
-    state.engine.get_container_stats(&id).await
+    let stats = state.engine.get_container_stats(&id).await?;
+
+    // Persist snapshot to the raw container_metrics_history table.
+    if let Ok(db) = state.db.lock() {
+        if let Err(e) = crate::engine::metrics_history::insert_container_stats(&db, &stats) {
+            log::warn!("Failed to persist container stats for {}: {}", id, e);
+        }
+    }
+
+    Ok(stats)
 }
 
 #[tauri::command]
@@ -153,10 +162,7 @@ pub async fn create_and_run_container(
 /// Export a container's filesystem as a tar archive.
 /// Executes: `docker export -o <output_path> <container_id>`
 #[tauri::command]
-pub async fn export_container(
-    container_id: String,
-    output_path: String,
-) -> Result<(), String> {
+pub async fn export_container(container_id: String, output_path: String) -> Result<(), String> {
     let output = Command::new("docker")
         .args(["export", "-o", &output_path, &container_id])
         .output()
@@ -210,7 +216,12 @@ pub async fn commit_container(
     // Docker commit returns the new image ID (e.g. "sha256:abc123...")
     let image_id = stdout.trim().to_string();
 
-    log::info!("Committed container {} as {} — ID: {}", container_id, image_tag, image_id);
+    log::info!(
+        "Committed container {} as {} — ID: {}",
+        container_id,
+        image_tag,
+        image_id
+    );
     Ok(image_id)
 }
 
@@ -225,7 +236,11 @@ pub async fn download_file_from_container(
 ) -> Result<(), String> {
     state
         .engine
-        .download_file_from_container(&container_id, &remote_path, std::path::PathBuf::from(local_dest))
+        .download_file_from_container(
+            &container_id,
+            &remote_path,
+            std::path::PathBuf::from(local_dest),
+        )
         .await
 }
 
@@ -238,7 +253,11 @@ pub async fn upload_file_to_container(
 ) -> Result<(), String> {
     state
         .engine
-        .upload_file_to_container(&container_id, std::path::PathBuf::from(local_src), &remote_dest)
+        .upload_file_to_container(
+            &container_id,
+            std::path::PathBuf::from(local_src),
+            &remote_dest,
+        )
         .await
 }
 

@@ -12,6 +12,7 @@ import { initSentry } from './lib/sentry'
 import './styles/theme.css'
 import './styles/layout.css'
 import './styles/components.css'
+import './styles/animations.css'
 
 /* ─── FontAwesome ─── */
 import '@fortawesome/fontawesome-free/css/all.min.css'
@@ -41,6 +42,56 @@ const routes = [
   { path: '/export-import', name: 'ExportImport', component: () => import('./views/ExportImport.vue') },
   { path: '/templates', name: 'Templates', component: () => import('./views/Templates.vue') },
   { path: '/image-scanner', name: 'ImageScanner', component: () => import('./views/ImageScanner.vue') },
+
+  // ─── v1.2.0: Kubernetes ───
+  {
+    path: '/kubernetes',
+    name: 'kubernetes',
+    component: () => import('./views/kubernetes/KubernetesView.vue'),
+    meta: { group: 'orchestration', icon: 'fa-ship' },
+  },
+  {
+    path: '/kubernetes/namespace/:ns',
+    name: 'kubernetes-namespace',
+    component: () => import('./views/kubernetes/KubernetesView.vue'),
+    meta: { group: 'orchestration' },
+  },
+  {
+    path: '/kubernetes/:resource/:name',
+    name: 'kubernetes-resource',
+    component: () => import('./views/kubernetes/KubernetesView.vue'),
+    meta: { group: 'orchestration' },
+  },
+
+  // ─── v1.2.0: Swarm ───
+  {
+    path: '/swarm',
+    name: 'swarm',
+    component: () => import(/* webpackChunkName: "swarm" */ './views/swarm/SwarmView.vue'),
+    meta: { group: 'orchestration', icon: 'fa-bees' },
+  },
+
+  // ─── v1.2.0: Metrics ───
+  {
+    path: '/metrics',
+    name: 'metrics',
+    component: () => import(/* webpackChunkName: "metrics" */ './views/metrics/MetricsView.vue'),
+    meta: { group: 'system', icon: 'fa-activity' },
+  },
+  {
+    path: '/metrics/:metric',
+    name: 'metrics-type',
+    component: () => import(/* webpackChunkName: "metrics" */ './views/metrics/MetricsView.vue'),
+    meta: { group: 'system' },
+  },
+
+  // ─── v1.2.0: Backup & Restore ───
+  {
+    path: '/backup',
+    name: 'backup',
+    component: () => import(/* webpackChunkName: "backup" */ './views/backup/BackupView.vue'),
+    meta: { group: 'operations', icon: 'fa-box-archive' },
+  },
 ]
 
 export const router = createRouter({

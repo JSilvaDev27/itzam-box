@@ -193,7 +193,10 @@ impl ContainerEngine for DockerLinuxEngine {
     async fn list_containers(&self, show_all: bool) -> Result<Vec<ContainerInfo>, String> {
         if let Some(client) = &self.rest_client {
             let query = if show_all { "?all=true" } else { "?all=false" };
-            match client.get_json_value(&format!("/containers/json{}", query)).await {
+            match client
+                .get_json_value(&format!("/containers/json{}", query))
+                .await
+            {
                 Ok(val) => {
                     if let Some(arr) = val.as_array() {
                         let mut containers = Vec::with_capacity(arr.len());
@@ -230,10 +233,8 @@ impl ContainerEngine for DockerLinuxEngine {
                                 .unwrap_or("")
                                 .to_string();
 
-                            let created_at = raw
-                                .get("Created")
-                                .and_then(|v| v.as_i64())
-                                .unwrap_or(0);
+                            let created_at =
+                                raw.get("Created").and_then(|v| v.as_i64()).unwrap_or(0);
 
                             // Ports
                             let ports = raw
@@ -250,11 +251,13 @@ impl ContainerEngine for DockerLinuxEngine {
                                             host_port: p
                                                 .get("PublicPort")
                                                 .and_then(|pp| pp.as_u64())
-                                                .unwrap_or(0) as u16,
+                                                .unwrap_or(0)
+                                                as u16,
                                             container_port: p
                                                 .get("PrivatePort")
                                                 .and_then(|pp| pp.as_u64())
-                                                .unwrap_or(0) as u16,
+                                                .unwrap_or(0)
+                                                as u16,
                                             protocol: p
                                                 .get("Type")
                                                 .and_then(|t| t.as_str())
@@ -271,15 +274,15 @@ impl ContainerEngine for DockerLinuxEngine {
                                 .and_then(|l| l.as_object())
                                 .map(|obj| {
                                     obj.iter()
-                                        .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+                                        .map(|(k, v)| {
+                                            (k.clone(), v.as_str().unwrap_or("").to_string())
+                                        })
                                         .collect::<std::collections::HashMap<String, String>>()
                                 })
                                 .unwrap_or_default();
 
-                            let compose_project =
-                                labels.get("com.docker.compose.project").cloned();
-                            let compose_service =
-                                labels.get("com.docker.compose.service").cloned();
+                            let compose_project = labels.get("com.docker.compose.project").cloned();
+                            let compose_service = labels.get("com.docker.compose.service").cloned();
 
                             containers.push(ContainerInfo {
                                 id,
@@ -493,9 +496,7 @@ impl ContainerEngine for DockerLinuxEngine {
                         .and_then(|n| n.as_object())
                         .map(|obj| {
                             obj.values()
-                                .filter_map(|iface| {
-                                    iface.get("rx_bytes").and_then(|v| v.as_u64())
-                                })
+                                .filter_map(|iface| iface.get("rx_bytes").and_then(|v| v.as_u64()))
                                 .sum()
                         })
                         .unwrap_or(0);
@@ -504,9 +505,7 @@ impl ContainerEngine for DockerLinuxEngine {
                         .and_then(|n| n.as_object())
                         .map(|obj| {
                             obj.values()
-                                .filter_map(|iface| {
-                                    iface.get("tx_bytes").and_then(|v| v.as_u64())
-                                })
+                                .filter_map(|iface| iface.get("tx_bytes").and_then(|v| v.as_u64()))
                                 .sum()
                         })
                         .unwrap_or(0);
@@ -570,8 +569,7 @@ impl ContainerEngine for DockerLinuxEngine {
         }
 
         // ── CLI fallback ──
-        let output =
-            Self::run_docker(&["stats", "--no-stream", "--format", "{{json .}}", id])?;
+        let output = Self::run_docker(&["stats", "--no-stream", "--format", "{{json .}}", id])?;
         let raw: serde_json::Value =
             serde_json::from_str(output.trim()).map_err(|e| format!("Parse: {}", e))?;
         Ok(ContainerStats {
@@ -664,13 +662,8 @@ impl ContainerEngine for DockerLinuxEngine {
 
     // ─── File Explorer (stubs — Phase 2) ─────────────────────────────────
 
-    async fn list_container_dir(
-        &self,
-        cid: &str,
-        path: &str,
-    ) -> Result<Vec<FileMetadata>, String> {
-        let output =
-            Self::run_docker(&["exec", cid, "ls", "-la", "--time-style=+%s", path])?;
+    async fn list_container_dir(&self, cid: &str, path: &str) -> Result<Vec<FileMetadata>, String> {
+        let output = Self::run_docker(&["exec", cid, "ls", "-la", "--time-style=+%s", path])?;
         let mut files = Vec::new();
         for line in output.lines().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -725,8 +718,7 @@ impl ContainerEngine for DockerLinuxEngine {
         remote: &str,
         max: usize,
     ) -> Result<String, String> {
-        let output =
-            Self::run_docker(&["exec", cid, "head", "-c", &max.to_string(), remote])?;
+        let output = Self::run_docker(&["exec", cid, "head", "-c", &max.to_string(), remote])?;
         Ok(output)
     }
 
@@ -754,15 +746,10 @@ impl ContainerEngine for DockerLinuxEngine {
                                 .map(split_repo_tag)
                                 .unwrap_or_default();
 
-                            let size_bytes = raw
-                                .get("Size")
-                                .and_then(|v| v.as_u64())
-                                .unwrap_or(0);
+                            let size_bytes = raw.get("Size").and_then(|v| v.as_u64()).unwrap_or(0);
 
-                            let created_at = raw
-                                .get("Created")
-                                .and_then(|v| v.as_i64())
-                                .unwrap_or(0);
+                            let created_at =
+                                raw.get("Created").and_then(|v| v.as_i64()).unwrap_or(0);
 
                             images.push(ImageInfo {
                                 id,
@@ -846,10 +833,8 @@ impl ContainerEngine for DockerLinuxEngine {
                                 .unwrap_or("")
                                 .to_string();
 
-                            let created_at = raw
-                                .get("Created")
-                                .and_then(|v| v.as_i64())
-                                .unwrap_or(0);
+                            let created_at =
+                                raw.get("Created").and_then(|v| v.as_i64()).unwrap_or(0);
 
                             layers.push(ImageLayerInfo {
                                 digest,
@@ -866,8 +851,7 @@ impl ContainerEngine for DockerLinuxEngine {
         }
 
         // ── CLI fallback ──
-        let output =
-            Self::run_docker(&["history", "--format", "{{json .}}", "--no-trunc", id])?;
+        let output = Self::run_docker(&["history", "--format", "{{json .}}", "--no-trunc", id])?;
         let mut layers = Vec::new();
         for line in output.lines() {
             if let Ok(raw) = serde_json::from_str::<serde_json::Value>(line.trim()) {
@@ -1377,11 +1361,7 @@ struct DfParseResult {
 
 /// Parse a named array from the Docker `/system/df` response and sum the
 /// given size field from each element.
-fn parse_df_array(
-    root: &serde_json::Value,
-    array_key: &str,
-    size_field: &str,
-) -> DfParseResult {
+fn parse_df_array(root: &serde_json::Value, array_key: &str, size_field: &str) -> DfParseResult {
     match root.get(array_key).and_then(|a| a.as_array()) {
         Some(arr) => {
             let count = arr.len();
@@ -1394,5 +1374,3 @@ fn parse_df_array(
         None => DfParseResult { count: 0, size: 0 },
     }
 }
-
-

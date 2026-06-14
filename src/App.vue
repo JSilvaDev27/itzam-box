@@ -8,6 +8,7 @@ import TerminalPanel from './components/terminal/TerminalPanel.vue'
 import ContextMenu from './components/shared/ContextMenu.vue'
 import CommandPalette from './components/shared/CommandPalette.vue'
 import OnboardingWizard from './components/onboarding/OnboardingWizard.vue'
+import PageTransitionWrapper from './components/shared/PageTransitionWrapper.vue'
 import { useTheme } from './composables/useTheme'
 import { useI18n } from './composables/useI18n'
 import { useNotifications } from './composables/useNotifications'
@@ -58,21 +59,49 @@ function toggleNotificationsPanel() {
   }
 }
 
-const navItems = [
-  { to: '/', icon: 'fa-chart-line', label: 'Dashboard' },
-  { to: '/containers', icon: 'fa-cubes', label: 'Containers' },
-  { to: '/images', icon: 'fa-layer-group', label: 'Images' },
-  { to: '/build', icon: 'fa-hammer', label: 'Build' },
-  { to: '/volumes', icon: 'fa-database', label: 'Volumes' },
-  { to: '/networks', icon: 'fa-network-wired', label: 'Networks' },
-  { to: '/events', icon: 'fa-clock-rotate-left', label: 'Events' },
-  { to: '/cleanup', icon: 'fa-broom', label: 'Cleanup' },
-  { to: '/compose', icon: 'fa-layer-group', label: 'Compose' },
-  { to: '/registries', icon: 'fa-server', label: 'Registries' },
-  { to: '/run-wizard', icon: 'fa-wand-magic-sparkles', label: 'Run Wizard' },
-  { to: '/templates', icon: 'fa-copy', label: 'Templates' },
-  { to: '/installer', icon: 'fa-docker', label: 'Docker Setup' },
-  { to: '/export-import', icon: 'fa-file-export', label: 'Export/Import' },
+const sidebarGroups = [
+  {
+    label: 'Core',
+    collapsed: false,
+    items: [
+      { to: '/', icon: 'fa-chart-line', label: 'Dashboard' },
+      { to: '/containers', icon: 'fa-cubes', label: 'Containers' },
+      { to: '/images', icon: 'fa-layer-group', label: 'Images' },
+      { to: '/volumes', icon: 'fa-database', label: 'Volumes' },
+      { to: '/networks', icon: 'fa-network-wired', label: 'Networks' },
+    ],
+  },
+  {
+    label: 'Orchestration',
+    collapsed: true,
+    items: [
+      { to: '/compose', icon: 'fa-layer-group', label: 'Compose' },
+      { to: '/swarm', icon: 'fa-bees', label: 'Swarm' },
+      { to: '/kubernetes', icon: 'fa-ship', label: 'Kubernetes' },
+    ],
+  },
+  {
+    label: 'Operations',
+    collapsed: false,
+    items: [
+      { to: '/backup', icon: 'fa-box-archive', label: 'Backup' },
+      { to: '/events', icon: 'fa-clock-rotate-left', label: 'Events' },
+      { to: '/cleanup', icon: 'fa-broom', label: 'Cleanup' },
+    ],
+  },
+  {
+    label: 'System',
+    collapsed: false,
+    items: [
+      { to: '/build', icon: 'fa-hammer', label: 'Build' },
+      { to: '/registries', icon: 'fa-server', label: 'Registries' },
+      { to: '/run-wizard', icon: 'fa-wand-magic-sparkles', label: 'Run Wizard' },
+      { to: '/templates', icon: 'fa-copy', label: 'Templates' },
+      { to: '/installer', icon: 'fa-docker', label: 'Docker Setup' },
+      { to: '/metrics', icon: 'fa-activity', label: 'Metrics' },
+      { to: '/export-import', icon: 'fa-file-export', label: 'Export/Import' },
+    ],
+  },
 ]
 </script>
 
@@ -152,16 +181,25 @@ const navItems = [
     <div class="main-layout">
       <aside :class="['sidebar', { collapsed: sidebarCollapsed }]">
         <nav class="sidebar-nav">
-          <router-link v-for="item in navItems" :key="item.to" :to="item.to" class="nav-item">
-            <i :class="'fa-solid ' + item.icon"></i>
-            <span class="nav-label" v-show="!sidebarCollapsed">{{ item.label }}</span>
-          </router-link>
+          <template v-for="group in sidebarGroups" :key="group.label">
+            <div class="nav-section-label" v-show="!sidebarCollapsed">{{ group.label }}</div>
+            <router-link
+              v-for="item in group.items"
+              :key="item.to"
+              :to="item.to"
+              class="nav-item"
+              :class="{ 'nav-item--collapsed-hint': sidebarCollapsed }"
+            >
+              <i :class="'fa-solid ' + item.icon"></i>
+              <span class="nav-label" v-show="!sidebarCollapsed">{{ item.label }}</span>
+            </router-link>
+          </template>
           <div class="nav-divider"></div>
-          <router-link to="/settings" class="nav-item">
+          <router-link to="/settings" class="nav-item" :class="{ 'nav-item--collapsed-hint': sidebarCollapsed }">
             <i class="fa-solid fa-gear"></i>
             <span class="nav-label" v-show="!sidebarCollapsed">Settings</span>
           </router-link>
-          <router-link to="/help" class="nav-item">
+          <router-link to="/help" class="nav-item" :class="{ 'nav-item--collapsed-hint': sidebarCollapsed }">
             <i class="fa-solid fa-circle-question"></i>
             <span class="nav-label" v-show="!sidebarCollapsed">Help</span>
           </router-link>
@@ -181,7 +219,9 @@ const navItems = [
       </aside>
 
       <main class="content">
-        <router-view />
+        <PageTransitionWrapper>
+          <router-view />
+        </PageTransitionWrapper>
       </main>
     </div>
 
