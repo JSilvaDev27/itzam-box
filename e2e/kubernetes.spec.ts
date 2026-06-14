@@ -156,8 +156,9 @@ test.describe('Sprint 18: Kubernetes Cluster Viewer E2E (T-068)', () => {
     await expect(page.locator('.k8s-inspector-drawer')).toBeVisible()
 
     // Click the "Keys" tab to render SecretValueMask entries
-    const keysTab = page.locator('.k8s-inspector-tab', { hasText: 'Keys' }).first()
+    const keysTab = page.locator('.k8s-inspector-tabs .k8s-inspector-tab', { hasText: 'Keys' }).first()
     await keysTab.click()
+    await page.waitForTimeout(150)
     await expect(keysTab).toHaveClass(/active/)
 
     // At least one SecretValueMask is rendered

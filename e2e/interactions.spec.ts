@@ -231,10 +231,16 @@ test.describe('Sprint 16: Command Palette + Context Menu E2E', () => {
     let startCalledWithId: string | null = null
     page.on('console', (msg) => {
       const text = msg.text()
-      if (text.includes('Mock Tauri Invoke: start_container')) {
+      if (text.includes('start_container')) {
         startCalled = true
-        const m = text.match(/start_container[\s\S]*?id[\s\S]*?['"]([^'"]+)['"]/)
-        if (m) startCalledWithId = m[1]
+        try {
+          const jsonStart = text.indexOf('{')
+          if (jsonStart !== -1) {
+            const jsonStr = text.substring(jsonStart)
+            const parsed = JSON.parse(jsonStr)
+            startCalledWithId = parsed.id || null
+          }
+        } catch { /* ignore */ }
       }
     })
 
@@ -276,6 +282,7 @@ test.describe('Sprint 16: Command Palette + Context Menu E2E', () => {
 
     // Click Start
     await startItem.click()
+    await page.waitForTimeout(200)
 
     // The start_container command should have been invoked with the container id
     expect(startCalled, 'start_container should have been invoked').toBe(true)
@@ -302,10 +309,16 @@ test.describe('Sprint 16: Command Palette + Context Menu E2E', () => {
     let stopCalledWithId: string | null = null
     page.on('console', (msg) => {
       const text = msg.text()
-      if (text.includes('Mock Tauri Invoke: stop_container')) {
+      if (text.includes('stop_container')) {
         stopCalled = true
-        const m = text.match(/stop_container[\s\S]*?id[\s\S]*?['"]([^'"]+)['"]/)
-        if (m) stopCalledWithId = m[1]
+        try {
+          const jsonStart = text.indexOf('{')
+          if (jsonStart !== -1) {
+            const jsonStr = text.substring(jsonStart)
+            const parsed = JSON.parse(jsonStr)
+            stopCalledWithId = parsed.id || null
+          }
+        } catch { /* ignore */ }
       }
     })
 
@@ -329,6 +342,7 @@ test.describe('Sprint 16: Command Palette + Context Menu E2E', () => {
     await expect(stopItem).not.toHaveClass(/ctx-disabled/)
 
     await stopItem.click()
+    await page.waitForTimeout(200)
 
     expect(stopCalled, 'stop_container should have been invoked').toBe(true)
     expect(stopCalledWithId).toBe('1234567890ab')
@@ -354,10 +368,17 @@ test.describe('Sprint 16: Command Palette + Context Menu E2E', () => {
     let removeCalledWithId: string | null = null
     page.on('console', (msg) => {
       const text = msg.text()
-      if (text.includes('Mock Tauri Invoke: remove_container')) {
+      if (text.includes('remove_container')) {
         removeCalled = true
-        const m = text.match(/remove_container[\s\S]*?id[\s\S]*?['"]([^'"]+)['"]/)
-        if (m) removeCalledWithId = m[1]
+        // Parse the JSON args from the log: "Mock Tauri Invoke: remove_container {"id":"xxx"}"
+        try {
+          const jsonStart = text.indexOf('{')
+          if (jsonStart !== -1) {
+            const jsonStr = text.substring(jsonStart)
+            const parsed = JSON.parse(jsonStr)
+            removeCalledWithId = parsed.id || null
+          }
+        } catch { /* ignore */ }
       }
     })
 
@@ -401,6 +422,7 @@ test.describe('Sprint 16: Command Palette + Context Menu E2E', () => {
     await expect(removeItem).toHaveClass(/ctx-danger/)
 
     await removeItem.click()
+    await page.waitForTimeout(200)
 
     // remove_container should have been invoked with the right id
     expect(removeCalled, 'remove_container should have been invoked').toBe(true)

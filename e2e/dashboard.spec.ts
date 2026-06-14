@@ -153,6 +153,7 @@ test.describe('ItzamBox Complete E2E Suite', () => {
       const tabElement = page.locator(`text=${tab}`).first()
       await expect(tabElement).toBeVisible()
       await tabElement.click()
+      await page.waitForTimeout(100)
     }
   })
 

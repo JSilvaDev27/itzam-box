@@ -15,7 +15,7 @@ defineEmits<{
         <i class="fa-solid fa-play" aria-hidden="true"></i>
       </div>
       <h3 class="swarm-cta-card__title">
-        Initialize Swarm
+        Initialize New Swarm
       </h3>
       <p class="swarm-cta-card__desc">
         Create a new Swarm cluster. This node will become the first manager node.

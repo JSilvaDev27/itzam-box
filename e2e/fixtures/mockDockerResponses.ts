@@ -5,7 +5,7 @@ export async function mockDockerResponses(page: Page) {
     // Provide both __TAURI__ and __TAURI_INTERNALS__ for compatibility
     const mockTauri = {
       invoke: async (cmd: string, args?: any) => {
-        console.log(`Mock Tauri Invoke: ${cmd}`, args)
+        console.log(`Mock Tauri Invoke: ${cmd} ${JSON.stringify(args ?? {})}`)
         
         // Check for runtime overrides
         if (window.__tauriMockOverrides && window.__tauriMockOverrides[cmd]) {
