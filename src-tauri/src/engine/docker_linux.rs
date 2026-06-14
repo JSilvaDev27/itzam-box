@@ -668,30 +668,15 @@ impl ContainerEngine for DockerLinuxEngine {
         Self::run_docker(&refs)
     }
 
-    // ─── File Explorer (stubs — Phase 2) ─────────────────────────────────
+    // ─── File Explorer ─────────────────────────────────────────────────────
 
     async fn list_container_dir(&self, cid: &str, path: &str) -> Result<Vec<FileMetadata>, String> {
         let output = Self::run_docker(&["exec", cid, "ls", "-la", "--time-style=+%s", path])?;
-        let mut files = Vec::new();
-        for line in output.lines().skip(1) {
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            // With --time-style=+%s, the timestamp is a single number column,
-            // so we expect 7+ parts (perms, links, owner, group, size, epoch, name)
-            if parts.len() >= 7 {
-                let name = parts[6..].join(" ");
-                files.push(FileMetadata {
-                    name: name.clone(),
-                    full_path: format!("{}/{}", path.trim_end_matches('/'), name),
-                    is_dir: parts[0].starts_with('d'),
-                    is_symlink: parts[0].starts_with('l'),
-                    size_bytes: parts[4].parse().unwrap_or(0),
-                    permissions: parts[0].to_string(),
-                    owner: format!("{}:{}", parts[2], parts[3]),
-                    group: parts[3].to_string(),
-                    updated_at: parts[5].parse().unwrap_or(0),
-                });
-            }
-        }
+        let files: Vec<FileMetadata> = output
+            .lines()
+            .skip(1) // skip the "total N" line
+            .filter_map(|line| parse_ls_line(line, path))
+            .collect();
         Ok(files)
     }
 
@@ -1400,5 +1385,169 @@ fn parse_df_array(root: &serde_json::Value, array_key: &str, size_field: &str) -
             DfParseResult { count, size }
         }
         None => DfParseResult { count: 0, size: 0 },
+    }
+}
+
+// ─── File Explorer Helpers ──────────────────────────────────────────────
+
+/// Parse a single line from `ls -la --time-style=+%s` output into a
+/// `FileMetadata` entry.  Returns `None` for lines that cannot be parsed
+/// (e.g. the "total N" header, malformed output).
+///
+/// Expected columns (whitespace-separated):
+///   0: permissions   (e.g. "-rw-r--r--", "drwxr-xr-x", "lrwxrwxrwx")
+///   1: link count
+///   2: owner
+///   3: group
+///   4: size in bytes
+///   5: epoch timestamp (from --time-style=+%s)
+///   6..: file name (may contain spaces)
+///
+/// For symlinks, `ls` outputs "name -> target" — we strip the " -> target"
+/// suffix so the name is just the symlink name.
+fn parse_ls_line(line: &str, base_path: &str) -> Option<FileMetadata> {
+    let parts: Vec<&str> = line.split_whitespace().collect();
+    if parts.len() < 7 {
+        return None;
+    }
+    let raw_name = parts[6..].join(" ");
+    // Strip " -> target" suffix from symlinks
+    let name = match raw_name.find(" -> ") {
+        Some(pos) => raw_name[..pos].to_string(),
+        None => raw_name,
+    };
+    Some(FileMetadata {
+        name: name.clone(),
+        full_path: format!("{}/{}", base_path.trim_end_matches('/'), name),
+        is_dir: parts[0].starts_with('d'),
+        is_symlink: parts[0].starts_with('l'),
+        size_bytes: parts[4].parse().unwrap_or(0),
+        permissions: parts[0].to_string(),
+        owner: parts[2].to_string(),
+        group: parts[3].to_string(),
+        updated_at: parts[5].parse().unwrap_or(0),
+    })
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Tests
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_regular_file() {
+        let line = "-rw-r--r--  1 root root    532 1728000002 config.json";
+        let meta = parse_ls_line(line, "/app").expect("should parse");
+
+        assert!(!meta.is_dir);
+        assert!(!meta.is_symlink);
+        assert_eq!(meta.name, "config.json");
+        assert_eq!(meta.full_path, "/app/config.json");
+        assert_eq!(meta.size_bytes, 532);
+        assert_eq!(meta.permissions, "-rw-r--r--");
+        assert_eq!(meta.owner, "root");
+        assert_eq!(meta.group, "root");
+        assert_eq!(meta.updated_at, 1728000002);
+    }
+
+    #[test]
+    fn test_parse_directory() {
+        let line = "drwxr-xr-x  2 dotnet dotnet  4096 1728000003 data";
+        let meta = parse_ls_line(line, "/app").expect("should parse");
+
+        assert!(meta.is_dir);
+        assert!(!meta.is_symlink);
+        assert_eq!(meta.name, "data");
+        assert_eq!(meta.full_path, "/app/data");
+        assert_eq!(meta.size_bytes, 4096);
+        assert_eq!(meta.owner, "dotnet");
+        assert_eq!(meta.group, "dotnet");
+    }
+
+    #[test]
+    fn test_parse_symlink() {
+        // Symlink: name should NOT include the " -> target" suffix
+        let line = "lrwxrwxrwx  1 root root      7 1728000000 bin -> usr/bin";
+        let meta = parse_ls_line(line, "/").expect("should parse");
+
+        assert!(meta.is_symlink);
+        assert!(!meta.is_dir);
+        assert_eq!(meta.name, "bin", "symlink name must strip ' -> target'");
+        assert_eq!(meta.full_path, "/bin");
+        assert_eq!(meta.size_bytes, 7);
+        assert_eq!(meta.permissions, "lrwxrwxrwx");
+    }
+
+    #[test]
+    fn test_parse_file_with_spaces() {
+        let line = "-rw-r--r--  1 root root   123 1728000000 my file.txt";
+        let meta = parse_ls_line(line, "/").expect("should parse");
+
+        assert_eq!(meta.name, "my file.txt");
+        assert_eq!(meta.full_path, "/my file.txt");
+    }
+
+    #[test]
+    fn test_parse_hidden_file() {
+        let line = "-rw-r--r--  1 root root     0 1728000000 .dockerignore";
+        let meta = parse_ls_line(line, "/build").expect("should parse");
+
+        assert_eq!(meta.name, ".dockerignore");
+        assert_eq!(meta.full_path, "/build/.dockerignore");
+    }
+
+    #[test]
+    fn test_parse_large_file_size() {
+        let line = "-rwxr-xr-x  1 user group 9876543210 1728000000 bigfile.bin";
+        let meta = parse_ls_line(line, "/data").expect("should parse");
+
+        assert_eq!(meta.size_bytes, 9876543210);
+        assert_eq!(meta.updated_at, 1728000000);
+    }
+
+    #[test]
+    fn test_parse_total_line_returns_none() {
+        let line = "total 16944";
+        assert!(parse_ls_line(line, "/").is_none(), "'total' line must be rejected");
+    }
+
+    #[test]
+    fn test_parse_current_dir() {
+        let line = "drwxr-xr-x  1 root root 4096 1728000000 .";
+        let meta = parse_ls_line(line, "/app").expect("should parse");
+
+        assert!(meta.is_dir);
+        assert_eq!(meta.name, ".");
+        assert_eq!(meta.full_path, "/app/.");
+    }
+
+    #[test]
+    fn test_parse_parent_dir() {
+        let line = "drwxr-xr-x  1 root root 4096 1728000001 ..";
+        let meta = parse_ls_line(line, "/app").expect("should parse");
+
+        assert!(meta.is_dir);
+        assert_eq!(meta.name, "..");
+        assert_eq!(meta.full_path, "/app/..");
+    }
+
+    #[test]
+    fn test_parse_file_with_root_path() {
+        let line = "drwxr-xr-x  1 root root 4096 1728000000 app";
+        let meta = parse_ls_line(line, "/").expect("should parse");
+
+        assert_eq!(meta.full_path, "/app");
+    }
+
+    #[test]
+    fn test_parse_nonroot_owner() {
+        let line = "-rw-rw-r--  1 dotnet dotnet   632 1781105833 appsettings.json";
+        let meta = parse_ls_line(line, "/app").expect("should parse");
+
+        assert_eq!(meta.owner, "dotnet", "owner must be just the user, not user:group");
+        assert_eq!(meta.group, "dotnet");
     }
 }
