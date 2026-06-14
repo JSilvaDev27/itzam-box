@@ -675,10 +675,13 @@ impl ContainerEngine for DockerLinuxEngine {
         let mut files = Vec::new();
         for line in output.lines().skip(1) {
             let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 9 {
+            // With --time-style=+%s, the timestamp is a single number column,
+            // so we expect 7+ parts (perms, links, owner, group, size, epoch, name)
+            if parts.len() >= 7 {
+                let name = parts[6..].join(" ");
                 files.push(FileMetadata {
-                    name: parts[8..].join(" "),
-                    full_path: format!("{}/{}", path.trim_end_matches('/'), parts[8..].join(" ")),
+                    name: name.clone(),
+                    full_path: format!("{}/{}", path.trim_end_matches('/'), name),
                     is_dir: parts[0].starts_with('d'),
                     is_symlink: parts[0].starts_with('l'),
                     size_bytes: parts[4].parse().unwrap_or(0),
