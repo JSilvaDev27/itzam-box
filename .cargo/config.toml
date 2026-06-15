@@ -1,0 +1,24 @@
+# ItzamBox Rust Compilation Optimizations
+# https://github.com/itzam-box/itzam-box
+#
+# mold linker: Modern high-performance linker that significantly reduces
+# build times by parallelizing linking and using efficient data structures.
+# Replaces GNU ld (gold) as the default system linker.
+#
+# clang: Used as the compiler driver to invoke mold via `-fuse-ld=mold`.
+
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+# Global optimization flags for faster compilation
+[profile.dev]
+# Use link-time optimization for dev builds (mold makes this fast enough)
+# lto = "thin"  # Uncomment if you need LTO in dev builds
+
+# Release profile with size optimizations for production builds
+[profile.release]
+lto = true
+codegen-units = 1
+strip = "symbols"
+opt-level = "z"   # Optimize for size

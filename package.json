@@ -12,7 +12,9 @@
     "test:e2e": "playwright test",
     "tauri:build": "npx tauri build",
     "build:appimage": "npx tauri build && bash scripts/fix-appimage-webkit.sh",
-    "tauri:dev": "npx tauri dev"
+    "tauri:dev": "npx tauri dev",
+    "test:rust": "cargo test",
+    "test:rust:fast": "cargo nextest run"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
