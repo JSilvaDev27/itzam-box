@@ -129,6 +129,26 @@ pub struct HostMetrics {
     pub kernel_version: String,
 }
 
+impl Default for HostMetrics {
+    fn default() -> Self {
+        Self {
+            cpu_usage_percent: 0.0,
+            cpu_cores: 0,
+            cpu_per_core: Vec::new(),
+            memory_used_bytes: 0,
+            memory_total_bytes: 0,
+            swap_used_bytes: 0,
+            swap_total_bytes: 0,
+            disk_used_bytes: 0,
+            disk_total_bytes: 0,
+            uptime_seconds: 0,
+            hostname: String::new(),
+            os_name: String::new(),
+            kernel_version: String::new(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct DockerEvent {
     pub event_type: String,

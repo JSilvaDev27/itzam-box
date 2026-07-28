@@ -55,7 +55,7 @@ onMounted(async () => {
     invoke('get_host_metrics').then((m: any) => {
       hostMetrics.value = m
     }).catch(() => {})
-  }, 5000)
+  }, 15000)
 
   onUnmounted(() => {
     if (metricsInterval) clearInterval(metricsInterval)

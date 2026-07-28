@@ -288,7 +288,7 @@ function startStatsPolling() {
   stopStatsPolling()
   if (!isRunning.value) return
   fetchStats()
-  statsInterval = window.setInterval(fetchStats, 3000)
+  statsInterval = window.setInterval(fetchStats, 5000)
 }
 
 function stopStatsPolling() {
@@ -751,7 +751,7 @@ onUnmounted(() => {
           <div data-testid="stats-polling-indicator" style="margin-bottom:12px;display:flex;align-items:center;gap:8px">
             <span style="font-size:12px;color:var(--text-muted)">
               <i class="fa-solid fa-circle" style="color:var(--accent-green);font-size:8px;margin-right:4px"></i>
-              Live (polling every 3s)
+              Live (polling every 5s)
             </span>
             <button class="btn btn-ghost btn-sm" @click="fetchStats" :disabled="statsLoading">
               <i class="fa-solid fa-rotate" :class="{ 'fa-spin': statsLoading }"></i> Refresh

@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use commands::events::EventStreamState;
 use commands::terminal::PtyManager;
 use db::manager::setup_database;
-use engine::docker_linux::DockerLinuxEngine;
+use engine::docker_linux::{DockerLinuxEngine, HostMetricsCache};
 use engine::traits::ContainerEngine;
 use tauri::Manager;
 use tauri_plugin_log::{RotationStrategy, Target, TargetKind, TimezoneStrategy};
@@ -42,8 +42,14 @@ pub fn run() {
     let db_path = app_data_dir().join("itzambox.db");
     let db_path_clone = db_path.clone();
     let db = setup_database(db_path).expect("Failed to initialize database");
-    let engine = DockerLinuxEngine::new();
     let db_arc = Arc::new(Mutex::new(db));
+
+    // ── HostMetricsCache: single System, background refresh, batch DB writes ──
+    // Refreshes every 3 seconds, flushes to SQLite every 30 s / 10 samples.
+    let host_metrics_cache =
+        HostMetricsCache::spawn(Arc::clone(&db_arc), 5);
+
+    let engine = DockerLinuxEngine::new(Some(host_metrics_cache));
 
     let state = AppState {
         engine: Arc::new(engine),

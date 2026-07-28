@@ -3,8 +3,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { invoke } from '@tauri-apps/api/core'
-import type { HostMetrics } from '../composables/useDocker'
 import { useDocker } from '../composables/useDocker'
 import { useContextMenu, containerContextMenu } from '../composables/useContextMenu'
 import { useTimeSeries } from '../composables/useTimeSeries'
@@ -28,7 +26,6 @@ const { cpuHistory, ramHistory, push: pushMetrics, clear: clearMetrics } = useTi
 const hasChartData = computed(() => cpuHistory.value.length > 0)
 
 let interval: number | undefined
-let metricsInterval: number | undefined
 
 onMounted(async () => {
   try {
@@ -38,23 +35,17 @@ onMounted(async () => {
     error.value = e?.toString?.() || String(e)
   }
   firstLoadDone.value = true
-  interval = window.setInterval(() => refreshAll(), 5000)
-  // Separate 2s interval for host-metrics polling → time-series charts
-  metricsInterval = window.setInterval(async () => {
-    try {
-      const m = await invoke<HostMetrics>('get_host_metrics')
-      hostMetrics.value = m
-      const ramPct = (m.memory_used_bytes / m.memory_total_bytes) * 100
-      pushMetrics(m.cpu_usage_percent, ramPct)
-    } catch {
-      // metrics polling is non-critical — swallow silently
+  interval = window.setInterval(async () => {
+    await refreshAll()
+    if (hostMetrics.value) {
+      const ramPct = (hostMetrics.value.memory_used_bytes / hostMetrics.value.memory_total_bytes) * 100
+      pushMetrics(hostMetrics.value.cpu_usage_percent, ramPct)
     }
-  }, 2000)
+  }, 8000)
 })
 
 onUnmounted(() => {
   if (interval) clearInterval(interval)
-  if (metricsInterval) clearInterval(metricsInterval)
   clearMetrics()
 })
 
@@ -187,7 +178,7 @@ function onContainerContextMenu(e: MouseEvent, c: typeof containers.value[0]) {
   </div>
 
   <!-- Time-Series Charts (CPU + RAM) — show skeleton until first data point arrives -->
-  <SkeletonLoader v-if="(!hasChartData || loading) && !error" variant="chart" />
+  <SkeletonLoader v-if="!hasChartData && loading && !error" variant="chart" />
   <div
     v-show="hasChartData && !error"
     class="charts-grid"

@@ -91,7 +91,7 @@ function buildConfig(): ChartConfiguration<'line', number[], string> {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      animation: { duration: 300 },
+      animation: false,
       interaction: {
         intersect: false,
         mode: 'index',

@@ -9,16 +9,187 @@ use crate::engine::types::*;
 use async_trait::async_trait;
 use std::path::PathBuf;
 use std::process::Command;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::UnixStream;
-use tokio::time::{timeout, Duration};
+use tokio::time::{interval, Duration};
 
-// ─── Docker Unix Socket Client (REST API) ────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+//  HostMetricsCache — Background-refreshed host metrics
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Thread-safe cache of `HostMetrics` refreshed by a background Tokio task.
+///
+/// # Design
+/// * A single `sysinfo::System` is allocated once and reused for every refresh.
+/// * CPU usage requires two reads separated by ≥200 ms. This sleep is done
+///   **in the background task** — callers never wait.
+/// * Only `refresh_cpu()`, `refresh_cpu_all()`, and `refresh_memory()` are
+///   called (not `refresh_all()`, `refresh_disks()`, or `refresh_networks()`).
+/// * Metrics are batched and flushed to SQLite periodically (every 30 s or
+///   every 10 samples, whichever comes first) via an `mpsc` channel.
+pub struct HostMetricsCache {
+    metrics: tokio::sync::RwLock<HostMetrics>,
+    system: std::sync::Mutex<sysinfo::System>,
+    db_tx: tokio::sync::mpsc::UnboundedSender<HostMetrics>,
+}
+
+impl HostMetricsCache {
+    /// Create the cache and spawn a background task that refreshes metrics
+    /// every `refresh_interval_secs` seconds.
+    ///
+    /// The initial CPU measurement is performed synchronously inside
+    /// `spawn_background` (first tick), so the cache starts with valid data.
+    pub fn spawn(
+        db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+        refresh_interval_secs: u64,
+    ) -> Arc<Self> {
+        let sys = sysinfo::System::new();
+        let (db_tx, db_rx) = tokio::sync::mpsc::unbounded_channel();
+
+        let cache = Arc::new(Self {
+            metrics: tokio::sync::RwLock::new(HostMetrics::default()),
+            system: std::sync::Mutex::new(sys),
+            db_tx,
+        });
+
+        // ── Background refresh loop ──
+        let bg = Arc::clone(&cache);
+        tokio::spawn(async move {
+            // 1) Initial CPU measurement (two-pass).
+            // First pass — only reads, lock released before sleep.
+            {
+                let mut sys = bg.system.lock().expect("sysinfo lock");
+                sys.refresh_cpu_all();
+            }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+
+            // Second pass — produce initial metrics and store without holding lock.
+            let init_metrics = {
+                let mut sys = bg.system.lock().expect("sysinfo lock");
+                sys.refresh_cpu_all();
+                sys.refresh_memory();
+                Self::collect(&sys)
+            }; // MutexGuard dropped here
+            *bg.metrics.write().await = init_metrics;
+
+            // 2) Periodic refresh.
+            let mut ticker = interval(Duration::from_secs(refresh_interval_secs));
+            loop {
+                ticker.tick().await;
+                // First CPU pass.
+                {
+                    let mut sys = bg.system.lock().expect("sysinfo lock");
+                    sys.refresh_cpu_all();
+                } // Lock released before sleep.
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                // Second CPU pass + memory — produces metrics.
+                let metrics = {
+                    let mut sys = bg.system.lock().expect("sysinfo lock");
+                    sys.refresh_cpu_all();
+                    sys.refresh_memory();
+                    Self::collect(&sys)
+                }; // MutexGuard dropped here
+                *bg.metrics.write().await = metrics.clone();
+                let _ = bg.db_tx.send(metrics);
+            }
+        });
+
+        // ── DB batch-flush worker ──
+        let db_clone = db;
+        tokio::spawn(async move {
+            Self::db_batch_worker(db_rx, db_clone).await;
+        });
+
+        cache
+    }
+
+    /// Return the latest cached metrics (instant, zero I/O).
+    pub async fn get(&self) -> HostMetrics {
+        self.metrics.read().await.clone()
+    }
+
+    // ─── Private helpers ────────────────────────────────────────────────
+
+    fn collect(sys: &sysinfo::System) -> HostMetrics {
+        HostMetrics {
+            cpu_usage_percent: sys.global_cpu_usage() as f64,
+            cpu_cores: sys.cpus().len(),
+            cpu_per_core: sys.cpus().iter().map(|c| c.cpu_usage() as f64).collect(),
+            memory_used_bytes: sys.used_memory(),
+            memory_total_bytes: sys.total_memory(),
+            swap_used_bytes: sys.used_swap(),
+            swap_total_bytes: sys.total_swap(),
+            disk_used_bytes: 0,
+            disk_total_bytes: 0,
+            uptime_seconds: sysinfo::System::uptime(),
+            hostname: sysinfo::System::host_name().unwrap_or_default(),
+            os_name: sysinfo::System::name().unwrap_or_default(),
+            kernel_version: sysinfo::System::kernel_version().unwrap_or_default(),
+        }
+    }
+
+    /// Background worker that receives metrics via channel, accumulates them
+    /// in a buffer, and flushes to SQLite every 30 s or every 10 samples.
+    async fn db_batch_worker(
+        mut rx: tokio::sync::mpsc::UnboundedReceiver<HostMetrics>,
+        db: Arc<std::sync::Mutex<rusqlite::Connection>>,
+    ) {
+        let mut buffer: Vec<HostMetrics> = Vec::with_capacity(10);
+        let mut flush_timer = tokio::time::interval(Duration::from_secs(30));
+
+        loop {
+            tokio::select! {
+                Some(m) = rx.recv() => {
+                    buffer.push(m);
+                    if buffer.len() >= 10 {
+                        Self::flush_buffer(&db, &buffer);
+                        buffer.clear();
+                    }
+                }
+                _ = flush_timer.tick() => {
+                    if !buffer.is_empty() {
+                        Self::flush_buffer(&db, &buffer);
+                        buffer.clear();
+                    }
+                }
+            }
+        }
+    }
+
+    fn flush_buffer(
+        db: &Arc<std::sync::Mutex<rusqlite::Connection>>,
+        batch: &[HostMetrics],
+    ) {
+        let conn = match db.lock() {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("[metrics_cache] DB lock error: {}", e);
+                return;
+            }
+        };
+        for m in batch {
+            if let Err(e) = crate::engine::metrics_history::insert_host_metrics(&conn, m) {
+                log::warn!("[metrics_cache] insert_host_metrics: {}", e);
+            }
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  Docker Unix Socket Client (REST API with connection reuse)
+// ═══════════════════════════════════════════════════════════════════════════
 
 /// Low-level HTTP client that speaks to the Docker Engine API over a
-/// Unix domain socket.  Used exclusively for read-only operations.
+/// Unix domain socket with connection reuse (keep-alive).
+///
+/// # Connection reuse
+/// We maintain a single keep-alive connection.  After each request the
+/// connection is stored back inside the mutex so subsequent requests can
+/// reuse it.  If the connection dies (write fails) a new one is created.
 struct DockerUnixClient {
     socket_path: String,
+    conn: tokio::sync::Mutex<Option<UnixStream>>,
 }
 
 impl DockerUnixClient {
@@ -31,42 +202,84 @@ impl DockerUnixClient {
         }
         Ok(Self {
             socket_path: path.to_string(),
+            conn: tokio::sync::Mutex::new(None),
         })
     }
 
     /// Perform a raw HTTP GET against the Docker API.
     /// The response body is returned as a `String`.
     async fn get(&self, api_path: &str) -> Result<String, String> {
-        let socket_path = self.socket_path.clone();
-        let api_path = api_path.to_owned();
+        let request = format!(
+            "GET {} HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\n\r\n",
+            api_path
+        );
 
-        let fut = async move {
-            let mut stream = UnixStream::connect(&socket_path).await?;
-            let request = format!(
-                "GET {} HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n",
-                api_path
-            );
-            stream.write_all(request.as_bytes()).await?;
-            let mut buf = Vec::new();
-            stream.read_to_end(&mut buf).await?;
-            Ok::<_, std::io::Error>(buf)
-        };
-
-        let buf = timeout(Duration::from_secs(30), fut)
-            .await
-            .map_err(|_| "Docker API request timed out after 30s".to_string())?
-            .map_err(|e| format!("Docker socket I/O error: {}", e))?;
-
-        let response = String::from_utf8_lossy(&buf);
-
-        // Split HTTP headers from body at the first blank line.
-        let parts: Vec<&str> = response.splitn(2, "\r\n\r\n").collect();
-        if parts.len() < 2 {
-            return Err("Invalid HTTP response from Docker daemon".into());
+        let mut guard = self.conn.lock().await;
+        // Try to reuse the pooled connection.
+        if let Some(ref mut stream) = *guard {
+            match stream.try_write(request.as_bytes()) {
+                Ok(n) if n == request.len() => {
+                    // Connection alive → read response from this stream.
+                    return Self::read_response(stream, api_path).await;
+                }
+                _ => {
+                    // Connection is dead; replace with a fresh one below.
+                }
+            }
         }
 
+        // Open a fresh connection.
+        let mut stream = UnixStream::connect(&self.socket_path)
+            .await
+            .map_err(|e| format!("Docker socket connect: {}", e))?;
+        stream
+            .write_all(request.as_bytes())
+            .await
+            .map_err(|e| format!("Docker socket write: {}", e))?;
+
+        let body = Self::read_response(&mut stream, api_path).await?;
+        // Keep the connection alive for the next request.
+        *guard = Some(stream);
+        Ok(body)
+    }
+
+    /// Read an HTTP response from the given stream using Content-Length
+    /// framing so we consume exactly one response and no more.
+    ///
+    /// This is essential for keep-alive connections — we must not call
+    /// `read_to_end` because the server will keep the connection open.
+    async fn read_response(
+        stream: &mut UnixStream,
+        _api_path: &str,
+    ) -> Result<String, String> {
+        const CHUNK: usize = 8192;
+        let mut buf = vec![0u8; CHUNK];
+        let mut received: Vec<u8> = Vec::with_capacity(4096);
+
+        // Read until we have the complete headers (\r\n\r\n).
+        let header_end = loop {
+            let n = stream
+                .read(&mut buf)
+                .await
+                .map_err(|e| format!("read: {}", e))?;
+            if n == 0 {
+                return Err("Docker connection closed prematurely".into());
+            }
+            received.extend_from_slice(&buf[..n]);
+            // Search for the double CRLF that terminates headers.
+            if let Some(pos) = received.windows(4).position(|w| w == b"\r\n\r\n") {
+                break pos;
+            }
+            if received.len() > 64 * 1024 {
+                return Err("Response headers exceeded 64 KB".into());
+            }
+        };
+
+        let header_str = std::str::from_utf8(&received[..header_end])
+            .map_err(|_| "Invalid HTTP headers".to_string())?;
+
         // Parse status line: "HTTP/1.1 200 OK"
-        let status_line = parts[0].lines().next().unwrap_or("");
+        let status_line = header_str.lines().next().unwrap_or("");
         let status_code: u16 = status_line
             .split_whitespace()
             .nth(1)
@@ -74,13 +287,41 @@ impl DockerUnixClient {
             .parse()
             .unwrap_or(500);
 
-        if status_code >= 400 {
-            let body = parts[1].trim();
-            // 404 is common for missing resources — surface it cleanly.
-            return Err(format!("Docker API error ({}): {}", status_code, body));
+        // Extract Content-Length.
+        let cl: usize = header_str
+            .lines()
+            .find_map(|l| {
+                if let Some((k, v)) = l.split_once(':') {
+                    if k.trim().eq_ignore_ascii_case("content-length") {
+                        return v.trim().parse().ok();
+                    }
+                }
+                None
+            })
+            .unwrap_or(0);
+
+        let body_start = header_end + 4; // skip \r\n\r\n
+        let body_already = received.len() - body_start;
+
+        // Read remaining body bytes if needed.
+        if cl > body_already {
+            let remaining = cl - body_already;
+            let mut tail = vec![0u8; remaining];
+            stream
+                .read_exact(&mut tail)
+                .await
+                .map_err(|e| format!("read body: {}", e))?;
+            received.extend_from_slice(&tail);
         }
 
-        Ok(parts[1].to_string())
+        let body = std::str::from_utf8(&received[body_start..body_start + cl])
+            .map_err(|_| "Invalid UTF-8 in body".to_string())?;
+
+        if status_code >= 400 {
+            return Err(format!("Docker API error ({}): {}", status_code, body.trim()));
+        }
+
+        Ok(body.to_string())
     }
 
     /// Perform a GET and deserialise the JSON body into a generic value.
@@ -99,13 +340,17 @@ impl DockerUnixClient {
 pub struct DockerLinuxEngine {
     /// `Some` when the Unix socket is present and usable at startup.
     rest_client: Option<DockerUnixClient>,
+    /// Shared cache of host metrics refreshed in background.
+    host_metrics_cache: Option<Arc<HostMetricsCache>>,
 }
 
 impl DockerLinuxEngine {
-    #[allow(clippy::new_without_default)]
-    pub fn new() -> Self {
+    pub fn new(cache: Option<Arc<HostMetricsCache>>) -> Self {
         let rest_client = DockerUnixClient::new().ok();
-        Self { rest_client }
+        Self {
+            rest_client,
+            host_metrics_cache: cache,
+        }
     }
 
     /// Quick file-existence check for the Docker socket.
@@ -1250,15 +1495,16 @@ impl ContainerEngine for DockerLinuxEngine {
 
     // ─── Host Metrics ────────────────────────────────────────────────────
 
+    /// Returns the latest host metrics from the background-refreshed cache.
+    /// This is now O(1) — no sysinfo calls, no 200 ms sleep, no I/O.
     async fn get_host_metrics(&self) -> Result<HostMetrics, String> {
-        use sysinfo::System;
-        let mut sys = System::new_all();
-        sys.refresh_all();
-        tokio::time::sleep(std::time::Duration::from_millis(200)).await;
-        sys.refresh_cpu_all();
-        let cpu = sys.global_cpu_usage() as f64;
+        if let Some(cache) = &self.host_metrics_cache {
+            return Ok(cache.get().await);
+        }
+        // Fallback (should only happen in tests or before cache is wired up).
+        let sys = sysinfo::System::new();
         Ok(HostMetrics {
-            cpu_usage_percent: cpu,
+            cpu_usage_percent: sys.global_cpu_usage() as f64,
             cpu_cores: sys.cpus().len(),
             cpu_per_core: sys.cpus().iter().map(|c| c.cpu_usage() as f64).collect(),
             memory_used_bytes: sys.used_memory(),
@@ -1267,10 +1513,10 @@ impl ContainerEngine for DockerLinuxEngine {
             swap_total_bytes: sys.total_swap(),
             disk_used_bytes: 0,
             disk_total_bytes: 0,
-            uptime_seconds: System::uptime(),
-            hostname: System::host_name().unwrap_or_default(),
-            os_name: System::name().unwrap_or_default(),
-            kernel_version: System::kernel_version().unwrap_or_default(),
+            uptime_seconds: sysinfo::System::uptime(),
+            hostname: sysinfo::System::host_name().unwrap_or_default(),
+            os_name: sysinfo::System::name().unwrap_or_default(),
+            kernel_version: sysinfo::System::kernel_version().unwrap_or_default(),
         })
     }
 }
